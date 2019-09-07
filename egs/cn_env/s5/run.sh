@@ -15,6 +15,7 @@ tst_set=/data/disk001/AISHELL-2/iOS/test
 
 # 2. Pronounciation Lexicon
 raw_lexicon=prepare/raw_lexicon.txt
+
 # 3. LM training corpus
 raw_text=prepare/raw_text.txt
 
@@ -51,8 +52,8 @@ fi
 
 # LM training 
 if [ $stage -le 4 ]; then
+  # TODO: add TN and WS into arpa LM training script
   # text normalization
-  #TODO
 
   # word segmentation
   #python local/word_segmentation.py --log_interval 50000 data/local/dict/word_seg_vocab.txt $raw_text prepare/text
