@@ -17,7 +17,7 @@ raw_lexicon=prepare/lexicon.txt
 lm_text=prepare/text.txt
 
 #-------------------- CONFIG --------------------#
-nj=10
+nj=20
 stage=1
 gmm_stage=1
 
@@ -66,15 +66,13 @@ if [ $stage -le 5 ]; then
     data/local/dict/lexicon.txt data/lang_test || exit 1;
 fi
 
-exit 0;
-
 # GMM
-if [ $stage -le 11 ]; then
+if [ $stage -le 10 ]; then
   local/run_gmm.sh --nj $nj --stage $gmm_stage
 fi
 
 # chain
-if [ $stage -le 21 ]; then
+if [ $stage -le 20 ]; then
   local/chain/run_tdnn.sh --nj $nj
 fi
 
