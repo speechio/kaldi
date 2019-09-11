@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # encoding=utf-8
 # Copyright 2019 Jiayu DU
-# Apache 2.0
 
 import sys, argparse, codecs
 import jieba

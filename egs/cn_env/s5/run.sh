@@ -1,8 +1,5 @@
 #!/bin/bash
-
-# Copyright 2019 Author: Jiayu DU
-# Apache 2.0
-
+# Copyright  2019 Jiayu DU
 
 #-------------------- RESOURCES --------------------#
 # 1. AM training corpus
@@ -14,16 +11,15 @@ dev_set=/data/disk001/AISHELL-2/iOS/dev
 tst_set=/data/disk001/AISHELL-2/iOS/test
 
 # 2. Pronounciation Lexicon
-raw_lexicon=prepare/raw_lexicon.txt
+raw_lexicon=prepare/lexicon.txt
 
 # 3. LM training corpus
-raw_text=prepare/raw_text.txt
+lm_text=prepare/text.txt
 
 #-------------------- CONFIG --------------------#
 nj=10
 stage=1
 gmm_stage=1
-
 
 . ./cmd.sh
 . ./path.sh
@@ -52,17 +48,16 @@ fi
 
 # LM training 
 if [ $stage -le 4 ]; then
-  # TODO: add TN and WS into arpa LM training script
-  # text normalization
+  dir=data/local/lm
+  mkdir -p $dir
+
+  # TODO: text normalization module
 
   # word segmentation
-  #python local/word_segmentation.py --log_interval 50000 data/local/dict/word_seg_vocab.txt $raw_text prepare/text
+  python local/word_segmentation.py data/local/dict/word_seg_vocab.txt ${lm_text} ${dir}/text  || exit 1;
 
   # train arpa
-  local/train_lms.sh \
-      data/local/dict/lexicon.txt \
-      data/train/text \
-      data/local/lm || exit 1;
+  local/train_arpa.sh data/local/dict/lexicon.txt ${dir}/text ${dir} || exit 1;
 fi
 
 # G compilation, check LG composition

@@ -1,10 +1,5 @@
 #!/bin/bash
-# Copyright 2018 AIShell-Foundation(Authors:Jiayu DU, Xingyu NA, Bengu WU, Hao ZHENG)
-#           2018 Beijing Shell Shell Tech. Co. Ltd. (Author: Hui BU)
-#           2019 Jiayu DU
-# Apache 2.0
-
-# transform raw AISHELL-2 data to kaldi format
+# Copyright  2019 Jiayu DU
 
 . ./path.sh || exit 1;
 

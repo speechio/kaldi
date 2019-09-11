@@ -1,10 +1,5 @@
 #!/bin/bash
-# Copyright 2018 AIShell-Foundation(Authors:Jiayu DU, Xingyu NA, Bengu WU, Hao ZHENG)
-#           2018 Beijing Shell Shell Tech. Co. Ltd. (Author: Hui BU)
-#           2019 Jiayu DU
-# Apache 2.0
-
-# This is a shell script, and it download and process DaCiDian for Mandarin ASR.
+# Copyright  2019 Jiayu DU
 
 . ./path.sh
 
