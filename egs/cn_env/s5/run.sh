@@ -18,7 +18,7 @@ lm_text=prepare/text.txt
 
 #-------------------- CONFIG --------------------#
 nj=20
-stage=20
+stage=1
 gmm_stage=1
 
 . ./cmd.sh
