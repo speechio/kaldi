@@ -37,11 +37,12 @@ utils/filter_scp.pl -f 1 $tmp/wav_utt.list $tmp/trans_utt.list > $tmp/utt.list
 awk -F'\t' -v path_prefix=$corpus '{printf("%s\t%s/%s\n",$1,path_prefix,$2)}' $corpus/wav.scp > $tmp/tmp_wav.scp
 utils/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_wav.scp | sort -k 1 | uniq > $tmp/wav.scp
 
-# text (word-segmentation)
+# text (text normalization & word segmentation)
+python -c "import jieba" 2>/dev/null || (echo "can't find jieba. Use tools/extra/install_jieba.sh." && exit 1;)
 utils/filter_scp.pl -f 1 $tmp/utt.list $corpus/trans.txt | sort -k 1 | uniq > $tmp/trans.txt
-python -c "import jieba" 2>/dev/null || \
-  (echo "jieba is not found. Use tools/extra/install_jieba.sh to install it." && exit 1;)
-python local/word_segmentation.py --has_key $word_seg_vocab $tmp/trans.txt $tmp/text
+python3 local/cn_tn.py --has_key --to_upper $tmp/trans.txt $tmp/trans_tn.txt
+python3 local/cn_ws.py --has_key $word_seg_vocab $tmp/trans_tn.txt $tmp/trans_tn_ws.txt
+ln -s $tmp/trans_tn_ws.txt $tmp/text
 
 # utt2spk & spk2utt
 awk -F'\t' '{print $2}' $tmp/wav.scp > $tmp/wav.list

@@ -35,9 +35,9 @@ fi
 
 # wav.scp, text(word-segmented), utt2spk, spk2utt
 if [ $stage -le 2 ]; then
-  local/prepare_am_data.sh ${trn_set} data/local/dict/word_seg_vocab.txt data/local/train data/train || exit 1;
-  local/prepare_am_data.sh ${dev_set} data/local/dict/word_seg_vocab.txt data/local/dev   data/dev   || exit 1;
-  local/prepare_am_data.sh ${tst_set} data/local/dict/word_seg_vocab.txt data/local/test  data/test  || exit 1;
+  local/prepare_am_data.sh $trn_set data/local/dict/word_seg_vocab.txt data/local/train data/train || exit 1;
+  local/prepare_am_data.sh $dev_set data/local/dict/word_seg_vocab.txt data/local/dev   data/dev   || exit 1;
+  local/prepare_am_data.sh $tst_set data/local/dict/word_seg_vocab.txt data/local/test  data/test  || exit 1;
 fi
 
 # L
@@ -51,13 +51,14 @@ if [ $stage -le 4 ]; then
   dir=data/local/lm
   mkdir -p $dir
 
-  # TODO: text normalization module
+  # text normalization
+  python3 local/cn_tn.py --to_upper $lm_text $dir/tmp
 
   # word segmentation
-  python local/word_segmentation.py data/local/dict/word_seg_vocab.txt ${lm_text} ${dir}/text  || exit 1;
+  python3 local/cn_ws.py data/local/dict/word_seg_vocab.txt $dir/tmp $dir/text  || exit 1;
 
   # train arpa
-  local/train_arpa.sh data/local/dict/lexicon.txt ${dir}/text ${dir} || exit 1;
+  local/train_arpa.sh data/local/dict/lexicon.txt $dir/text $dir || exit 1;
 fi
 
 # G compilation, check LG composition
