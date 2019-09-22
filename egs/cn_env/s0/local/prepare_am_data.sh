@@ -42,7 +42,7 @@ python -c "import jieba" 2>/dev/null || (echo "can't find jieba. Use tools/extra
 utils/filter_scp.pl -f 1 $tmp/utt.list $corpus/trans.txt | sort -k 1 | uniq > $tmp/trans.txt
 python3 local/cn_tn.py --has_key --to_upper $tmp/trans.txt $tmp/trans_tn.txt
 python3 local/cn_ws.py --has_key $word_seg_vocab $tmp/trans_tn.txt $tmp/trans_tn_ws.txt
-ln -s $tmp/trans_tn_ws.txt $tmp/text
+mv $tmp/trans_tn_ws.txt $tmp/text
 
 # utt2spk & spk2utt
 awk -F'\t' '{print $2}' $tmp/wav.scp > $tmp/wav.list
