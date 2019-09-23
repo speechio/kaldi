@@ -57,18 +57,19 @@ dir=${dir}${affix:+_$affix}
 train_set=train
 test_sets="dev test"
 ali_dir=exp/tri3_ali
-lat_dir=exp/tri3_lat
+lat_dir=exp/tri3_lat_ali
 tree_dir=exp/chain/tree
 lang=data/lang_chain
 
 if [ $stage -le 6 ]; then
   for x in ${train_set} ${test_sets}; do
-    utils/copy_data_dir.sh data/${x} data/${x}_mfcc_hires
-    utils/data/perturb_data_dir_volume.sh data/${x}_mfcc_hires || exit 1;
-    steps/make_mfcc.sh --nj $nj --cmd "$decode_cmd" \
+    utils/copy_data_dir.sh data/${x} data/mfcc_hires_${x}
+    utils/data/perturb_data_dir_volume.sh data/mfcc_hires_${x} || exit 1;
+    steps/make_mfcc.sh --cmd "$decode_cmd" --nj $nj \
       --mfcc-config conf/mfcc_hires.conf \
-      data/${x}_mfcc_hires exp/make_mfcc mfcc_hires
-    steps/compute_cmvn_stats.sh data/${x}_mfcc_hires exp/make_mfcc mfcc_hires
+      data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
+    steps/compute_cmvn_stats.sh \
+      data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
   done
 fi
 
@@ -76,7 +77,7 @@ if [ $stage -le 7 ]; then
   # Get the alignments as lattices (gives the LF-MMI training more freedom).
   # use the same num-jobs as the alignments
   nj=$(cat $ali_dir/num_jobs) || exit 1;
-  steps/align_fmllr_lats.sh --nj $nj --cmd "$train_cmd" \
+  steps/align_fmllr_lats.sh --cmd "$train_cmd" --nj $nj \
     data/$train_set data/lang exp/tri3 $lat_dir
   rm ${lat_dir}/fsts.*.gz # save space
 fi
@@ -175,7 +176,7 @@ if [ $stage -le 11 ]; then
     --trainer.optimization.final-effective-lrate $final_effective_lrate \
     --trainer.max-param-change $max_param_change \
     --cleanup.remove-egs $remove_egs \
-    --feat-dir data/${train_set}_mfcc_hires \
+    --feat-dir data/mfcc_hires_${train_set} \
     --tree-dir $tree_dir \
     --lat-dir $lat_dir \
     --dir $dir || exit 1;
@@ -191,9 +192,9 @@ fi
 if [ $stage -le 13 ]; then
   for x in $test_sets; do
     nj=$(wc -l data/${x}_mfcc_hires/spk2utt | awk '{print $1}')
-    steps/nnet3/decode.sh --nj $nj --cmd "$decode_cmd" \
+    steps/nnet3/decode.sh --cmd "$decode_cmd" --nj $nj \
       --acwt 1.0 --post-decode-acwt 10.0 \
-      $dir/graph data/${x}_mfcc_hires $dir/decode_${x} || exit 1;
+      $dir/graph data/mfcc_hires_${x} $dir/decode_${x} || exit 1;
   done
 fi
 

@@ -23,10 +23,12 @@ if [ $stage -le 1 ]; then
   # mfccdir should be some place with a largish disk where you
   # want to store MFCC features.
   for x in train dev test; do
-    steps/make_mfcc_pitch.sh --pitch-config conf/pitch.conf --cmd "$train_cmd" --nj $nj \
-      data/$x exp/make_mfcc/$x mfcc || exit 1;
-    steps/compute_cmvn_stats.sh data/$x exp/make_mfcc/$x mfcc || exit 1;
-    utils/fix_data_dir.sh data/$x || exit 1;
+    steps/make_mfcc_pitch.sh --cmd "$train_cmd" --nj $nj \
+      --pitch-config conf/pitch.conf \
+      data/${x} exp/log/make_mfcc_${x} mfcc || exit 1;
+    steps/compute_cmvn_stats.sh \
+      data/${x} exp/log/make_mfcc_${x} mfcc || exit 1;
+    utils/fix_data_dir.sh data/${x} || exit 1;
   done
   
   # subset the training data for fast startup
