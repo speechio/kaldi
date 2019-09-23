@@ -70,6 +70,7 @@ if [ $stage -le 6 ]; then
       data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
     steps/compute_cmvn_stats.sh \
       data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
+    utils/fix_data_dir.sh data/mfcc_hires_${x} || exit 1;
   done
 fi
 
