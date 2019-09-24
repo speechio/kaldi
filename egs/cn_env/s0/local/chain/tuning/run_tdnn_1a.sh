@@ -192,7 +192,7 @@ fi
 
 if [ $stage -le 13 ]; then
   for x in $test_sets; do
-    nj=$(wc -l data/${x}_mfcc_hires/spk2utt | awk '{print $1}')
+    nj=$(wc -l data/mfcc_hires_${x}/spk2utt | awk '{print $1}')
     steps/nnet3/decode.sh --cmd "$decode_cmd" --nj $nj \
       --acwt 1.0 --post-decode-acwt 10.0 \
       $dir/graph data/mfcc_hires_${x} $dir/decode_${x} || exit 1;
