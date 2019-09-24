@@ -25,9 +25,9 @@ if [ $stage -le 1 ]; then
   for x in train dev test; do
     steps/make_mfcc_pitch.sh --cmd "$train_cmd" --nj $nj \
       --pitch-config conf/pitch.conf \
-      data/${x} exp/log/make_mfcc_${x} mfcc || exit 1;
+      data/${x} data/${x}/log mfcc || exit 1;
     steps/compute_cmvn_stats.sh \
-      data/${x} exp/log/make_mfcc_${x} mfcc || exit 1;
+      data/${x} data/${x}/log mfcc || exit 1;
     utils/fix_data_dir.sh data/${x} || exit 1;
   done
   

@@ -67,9 +67,9 @@ if [ $stage -le 6 ]; then
     utils/data/perturb_data_dir_volume.sh data/mfcc_hires_${x} || exit 1;
     steps/make_mfcc.sh --cmd "$decode_cmd" --nj $nj \
       --mfcc-config conf/mfcc_hires.conf \
-      data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
+      data/mfcc_hires_${x} data/mfcc_hires_${x}/log mfcc_hires || exit 1;
     steps/compute_cmvn_stats.sh \
-      data/mfcc_hires_${x} exp/log/make_mfcc_hires_${x} mfcc_hires || exit 1;
+      data/mfcc_hires_${x} data/mfcc_hires_${x}/log mfcc_hires || exit 1;
     utils/fix_data_dir.sh data/mfcc_hires_${x} || exit 1;
   done
 fi
