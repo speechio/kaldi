@@ -21,14 +21,15 @@ dir=exp/chain/tdnn_1a
 decode_iter=
 
 # training options
-num_epochs=4
+#num_epochs=4
+num_epochs=1 # FOR TEST PURPOSE
 initial_effective_lrate=0.001
 final_effective_lrate=0.0001
 max_param_change=2.0
 final_layer_normalize_target=0.5
 num_jobs_initial=2
 num_jobs_final=2
-nj=10
+nj=20
 minibatch_size=128
 frames_per_eg=150,110,90
 remove_egs=true
