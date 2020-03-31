@@ -44,16 +44,20 @@ python3 local/cn_tn.py --has_key --to_upper $tmp/trans.txt $tmp/trans_tn.txt
 python3 local/cn_ws.py --has_key $word_seg_vocab $tmp/trans_tn.txt $tmp/trans_tn_ws.txt
 mv $tmp/trans_tn_ws.txt $tmp/text
 
+## AISHELL-2 utt2spk & spk2utt
+#awk -F'\t' '{print $2}' $tmp/wav.scp > $tmp/wav.list
+#sed -e 's:\.wav::g' $tmp/wav.list | \
+#  awk -F'/' '{i=NF-1;printf("%s\t%s\n",$NF,$i)}' > $tmp/tmp_utt2spk
+#utils/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_utt2spk | sort -k 1 | uniq > $tmp/utt2spk
+#utils/utt2spk_to_spk2utt.pl $tmp/utt2spk | sort -k 1 | uniq > $tmp/spk2utt
+
 # utt2spk & spk2utt
-awk -F'\t' '{print $2}' $tmp/wav.scp > $tmp/wav.list
-sed -e 's:\.wav::g' $tmp/wav.list | \
-  awk -F'/' '{i=NF-1;printf("%s\t%s\n",$NF,$i)}' > $tmp/tmp_utt2spk
-utils/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_utt2spk | sort -k 1 | uniq > $tmp/utt2spk
+cp $corpus/utt2spk $tmp/utt2spk
 utils/utt2spk_to_spk2utt.pl $tmp/utt2spk | sort -k 1 | uniq > $tmp/spk2utt
 
 # copy prepared resources from tmp_dir to target dir
 mkdir -p $dir
-for f in wav.scp text spk2utt utt2spk; do
+for f in wav.scp text utt2spk spk2utt; do
   cp $tmp/$f $dir/$f || exit 1;
 done
 
