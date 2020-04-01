@@ -33,7 +33,7 @@ stcmds=$DB/stcmds/data
 
 ## AM training & testing data
 trn_list=""
-trn_list="$trn_list aidatatang_train aidatatang_dev"
+#trn_list="$trn_list aidatatang_train aidatatang_dev"
 trn_list="$trn_list AISHELL1_train AISHELL1_dev"
 trn_list="$trn_list AISHELL2_iOS_train AISHELL2_iOS_dev"
 trn_list="$trn_list AISHELL2_Android_train AISHELL2_Android_dev"
@@ -44,7 +44,10 @@ trn_list="$trn_list primewords"
 trn_list="$trn_list stcmds"
 
 tst_list=""
-tst_list="$tst_list aidatatang_test AISHELL1_test AISHELL2_iOS_test AISHELL2_Android_test magicdata_test" 
+#tst_list="$tst_list aidatatang_test" 
+tst_list="$tst_list AISHELL1_test" 
+tst_list="$tst_list AISHELL2_iOS_test AISHELL2_Android_test" 
+tst_list="$tst_list magicdata_test" 
 
 ## Pronounciation Lexicon
 raw_lexicon=prepare/lexicon.txt
@@ -54,7 +57,7 @@ lm_text=prepare/text.txt
 
 #-------------------- CONFIG --------------------#
 nj=20
-stage=3
+stage=0
 gmm_stage=1
 
 . ./cmd.sh
@@ -84,7 +87,6 @@ if [ $stage -le 2 ]; then
   done
 fi
 
-
 if [ $stage -le 3 ]; then
   echo "Combine training sets"
   combine_list=""
@@ -95,7 +97,7 @@ if [ $stage -le 3 ]; then
       combine_list="$combine_list,$s"
     fi
   done
-  cmd="sh utils/combine_data.sh data/train_all data/{$combine_list}"
+  cmd="utils/combine_data.sh data/train_all data/{$combine_list}"
   #echo $cmd
   eval $cmd
 
@@ -108,12 +110,16 @@ if [ $stage -le 3 ]; then
       combine_list="$combine_list,$s"
     fi
   done
-  cmd="sh utils/combine_data.sh data/test_all data/{$combine_list}"
+  cmd="utils/combine_data.sh data/test_all data/{$combine_list}"
   #echo $cmd
   eval $cmd
 fi
 
-exit 0;
+if [ $stage -le 4 ]; then
+  utils/subset_data_dir.sh data/train_all 310000 data/train
+  utils/subset_data_dir.sh data/test_all 1000 data/dev
+  utils/subset_data_dir.sh data/test_all 1000 data/test
+fi
 
 # L
 if [ $stage -le 5 ]; then
