@@ -8,16 +8,14 @@ set -e
 
 # number of jobs
 nj=20
+test_nj=20
 stage=0
-train_set="train_gmm"
+train_set="train"
 test_sets="test"
 
 . ./cmd.sh
 [ -f ./path.sh ] && . ./path.sh;
 . ./utils/parse_options.sh
-
-# nj for test
-test_nj=$(wc -l data/test/spk2utt | awk '{print $1}' || exit 1;)
 
 # Now make MFCC features.
 if [ $stage -le 1 ]; then
@@ -45,6 +43,7 @@ if [ $stage -le 2 ]; then
   utils/mkgraph.sh data/lang_test exp/mono exp/mono/graph || exit 1;
 
   for x in $test_sets; do
+    test_nj=$(wc -l data/$x/spk2utt | awk '{print $1}' || exit 1;)
     steps/decode.sh --cmd "$decode_cmd" --config conf/decode.conf --nj ${test_nj} \
       exp/mono/graph data/$x exp/mono/decode_$x
   done
@@ -64,6 +63,7 @@ if [ $stage -le 3 ]; then
   utils/mkgraph.sh data/lang_test exp/tri1 exp/tri1/graph || exit 1;
 
   for x in $test_sets; do
+    test_nj=$(wc -l data/$x/spk2utt | awk '{print $1}' || exit 1;)
     steps/decode.sh --cmd "$decode_cmd" --config conf/decode.conf --nj ${test_nj} \
       exp/tri1/graph data/$x exp/tri1/decode_$x
   done
@@ -83,6 +83,7 @@ if [ $stage -le 4 ]; then
   utils/mkgraph.sh data/lang_test exp/tri2 exp/tri2/graph
   
   for x in $test_sets; do
+    test_nj=$(wc -l data/$x/spk2utt | awk '{print $1}' || exit 1;)
     steps/decode.sh --cmd "$decode_cmd" --config conf/decode.conf --nj ${test_nj} \
       exp/tri2/graph data/$x exp/tri2/decode_$x
   done
@@ -102,6 +103,7 @@ if [ $stage -le 5 ]; then
   utils/mkgraph.sh data/lang_test exp/tri3 exp/tri3/graph || exit 1;
 
   for x in $test_sets; do
+    test_nj=$(wc -l data/$x/spk2utt | awk '{print $1}' || exit 1;)
     steps/decode.sh --cmd "$decode_cmd" --nj ${test_nj} --config conf/decode.conf \
       exp/tri3/graph data/$x exp/tri3/decode_$x
   done

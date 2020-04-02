@@ -31,6 +31,7 @@ mobile_2000h=$DB/mobile_2000h/data
 primewords=$DB/primewords/data
 stcmds=$DB/stcmds/data
 
+#-------------------- CONFIG --------------------#
 ## AM training & testing data
 trn_list=""
 #trn_list="$trn_list aidatatang_train aidatatang_dev"
@@ -46,7 +47,8 @@ trn_list="$trn_list stcmds"
 tst_list=""
 #tst_list="$tst_list aidatatang_test" 
 tst_list="$tst_list AISHELL1_test" 
-tst_list="$tst_list AISHELL2_iOS_test AISHELL2_Android_test" 
+tst_list="$tst_list AISHELL2_iOS_test" 
+tst_list="$tst_list AISHELL2_Android_test" 
 tst_list="$tst_list magicdata_test" 
 
 ## Pronounciation Lexicon
@@ -55,80 +57,76 @@ raw_lexicon=prepare/lexicon.txt
 ## LM training corpus
 lm_text=prepare/text.txt
 
-#-------------------- CONFIG --------------------#
+#-----------------------------------------------#
+
+STEP_PREP_DICT=1
+STEP_PREP_AM_DATA=1
+STEP_COMBINE_AM_DATA=1
+STEP_SUBSET_AM_DATA=1
+STEP_PREP_LANG=1
+STEP_TRAIN_LM=1
+STEP_TRAIN_GMM=1
+STEP_TRAIN_DNN=1
+STEP_SHOW_RESULTS=1
+
+num_utts_gmm=5000
+num_utts_dnn=10000
+num_utts_test=100
+
+#-----------------------------------------------#
 nj=20
-stage=0
-gmm_stage=1
+gmm_stage=0
+dnn_stage=0
 
 . ./cmd.sh
 . ./path.sh
 . ./utils/parse_options.sh
 
-#
-if [ $stage -le 1 ]; then
+if [ $STEP_PREP_DICT -eq 1 ]; then
   sh local/prepare_dict.sh $raw_lexicon data/local/dict || exit 1;
-
   # generate jieba's word-seg vocab, it requires word count(frequency), set to 99
   awk '{print $1}' data/local/dict/lexicon.txt | sort | uniq | awk '{print $1,99}' > data/local/dict/ws_vocab.txt
 fi
 
-# prepare acoustic data & transcriptions
-if [ $stage -le 2 ]; then
-  for s in $trn_list; do
-    name=$s
-    path=`eval echo '$'$s`
-    sh local/prepare_am_data.sh ${path} data/local/dict/ws_vocab.txt data/local/${name} data/${name} || exit 1;
-  done
-
-  for s in $tst_list; do
-    name=$s
-    path=`eval echo '$'$s`
-    sh local/prepare_am_data.sh ${path} data/local/dict/ws_vocab.txt data/local/${name} data/${name} || exit 1;
+if [ $STEP_PREP_AM_DATA -eq 1 ]; then
+  for x in $trn_list $tst_list; do
+    path=`eval echo '$'$x`
+    sh local/prepare_am_data.sh ${path} data/local/dict/ws_vocab.txt data/local/$x data/$x || exit 1;
   done
 fi
 
-if [ $stage -le 3 ]; then
-  echo "Combine training sets"
-  combine_list=""
-  for s in $trn_list; do
-    if [ -z $combine_list ]; then
-      combine_list=$s
-    else
-      combine_list="$combine_list,$s"
-    fi
+if [ $STEP_COMBINE_AM_DATA -eq 1 ]; then
+  cmd="utils/combine_data.sh data/train_all"
+  for x in $trn_list; do
+    cmd="$cmd data/$x"
   done
-  cmd="utils/combine_data.sh data/train_all data/{$combine_list}"
-  #echo $cmd
   eval $cmd
+  echo "Training Sets Combined."
 
-  echo "Combine testing sets"
-  combine_list=""
-  for s in $tst_list; do
-    if [ -z $combine_list ]; then
-      combine_list=$s
-    else
-      combine_list="$combine_list,$s"
-    fi
+  cmd="utils/combine_data.sh data/test_all"
+  for x in $tst_list; do
+    cmd="$cmd data/$x"
   done
-  cmd="utils/combine_data.sh data/test_all data/{$combine_list}"
-  #echo $cmd
   eval $cmd
+  echo "Testing Sets Combined."
 fi
 
-if [ $stage -le 4 ]; then
-  utils/subset_data_dir.sh data/train_all 310000 data/train
-  utils/subset_data_dir.sh data/test_all 1000 data/dev
-  utils/subset_data_dir.sh data/test_all 1000 data/test
+if [ $STEP_SUBSET_AM_DATA -eq 1 ]; then
+  # trn set
+  utils/subset_data_dir.sh data/train_all $num_utts_gmm data/train_gmm
+  utils/subset_data_dir.sh data/train_all $num_utts_dnn data/train    # For DNN training
+
+  # tst set
+  utils/subset_data_dir.sh data/test_all $num_utts_test data/test1
+  utils/subset_data_dir.sh data/test_all $num_utts_test data/test2
 fi
 
-# L
-if [ $stage -le 5 ]; then
+if [ $STEP_PREP_LANG -eq 1 ]; then
   utils/prepare_lang.sh --position-dependent-phones false \
     data/local/dict "<UNK>" data/local/lang data/lang || exit 1;
 fi
 
-# LM training 
-if [ $stage -le 6 ]; then
+if [ $STEP_TRAIN_LM -eq 1 ]; then
   dir=data/local/lm
   mkdir -p $dir
 
@@ -140,24 +138,26 @@ if [ $stage -le 6 ]; then
 
   # train arpa
   local/train_arpa.sh data/local/dict/lexicon.txt $dir/text $dir || exit 1;
-fi
 
-# G compilation, check LG composition
-if [ $stage -le 7 ]; then
+  # convert LM to FST format
   utils/format_lm.sh data/lang data/local/lm/3gram-mincount/lm_unpruned.gz \
     data/local/dict/lexicon.txt data/lang_test || exit 1;
 fi
 
-# GMM
-if [ $stage -le 10 ]; then
-  local/run_gmm.sh --nj $nj --stage $gmm_stage
+if [ $STEP_TRAIN_GMM -eq 1 ]; then
+  local/run_gmm.sh --nj $nj \
+    --stage $gmm_stage \
+    --train-set "train_gmm" --test-sets "test1 test2"
 fi
 
-# chain
-if [ $stage -le 20 ]; then
-  local/chain/run_tdnn.sh --nj $nj
+if [ $STEP_TRAIN_DNN -eq 1 ]; then
+  local/chain/run_tdnn.sh --nj $nj \
+    --stage $dnn_stage \
+    --train-set "train" --test-sets "test1 test2"
 fi
 
-local/show_results.sh
+if [ $STEP_SHOW_RESULTS -eq 1 ]; then
+  local/show_results.sh
+fi
 
 exit 0;

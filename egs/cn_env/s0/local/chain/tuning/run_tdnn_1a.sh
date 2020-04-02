@@ -18,6 +18,8 @@ stage=0
 train_stage=-10
 get_egs_stage=-10
 dir=exp/chain/tdnn_1a
+train_set="train"
+test_sets="test"
 decode_iter=
 
 # training options
@@ -55,8 +57,6 @@ fi
 # no utt- and spk- level cmvn
 
 dir=${dir}${affix:+_$affix}
-train_set=train
-test_sets="test"
 ali_dir=exp/tri3_ali
 lat_dir=exp/tri3_lat_ali
 tree_dir=exp/chain/tree
