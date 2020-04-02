@@ -65,14 +65,33 @@ lang=data/lang_chain
 if [ $stage -le 6 ]; then
   for x in ${train_set} ${test_sets}; do
     utils/copy_data_dir.sh data/${x} data/mfcc_hires_${x}
+
     utils/data/perturb_data_dir_volume.sh data/mfcc_hires_${x} || exit 1;
-    steps/make_mfcc.sh --cmd "$decode_cmd" --nj $nj \
+
+    steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj \
       --mfcc-config conf/mfcc_hires.conf \
       data/mfcc_hires_${x} data/mfcc_hires_${x}/log mfcc_hires || exit 1;
+
     steps/compute_cmvn_stats.sh \
       data/mfcc_hires_${x} data/mfcc_hires_${x}/log mfcc_hires || exit 1;
+
     utils/fix_data_dir.sh data/mfcc_hires_${x} || exit 1;
   done
+fi
+
+if [ $stage -le 7 ]; then
+    # get alignments for DNN training
+  steps/make_mfcc_pitch.sh --cmd "$train_cmd" --nj $nj \
+    --pitch-config conf/pitch.conf \
+    data/${train_set} data/${train_set}/log mfcc || exit 1;
+
+  steps/compute_cmvn_stats.sh \
+    data/${train_set} data/${train_set}/log mfcc || exit 1;
+
+  utils/fix_data_dir.sh data/${train_set} || exit 1;
+
+  steps/align_si.sh --cmd "$train_cmd" --nj $nj \
+    data/${train_set} data/lang exp/tri3 $ali_dir || exit 1;
 fi
 
 if [ $stage -le 7 ]; then
