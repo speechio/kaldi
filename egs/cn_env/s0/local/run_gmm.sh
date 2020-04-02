@@ -10,14 +10,13 @@ set -e
 nj=20
 stage=0
 train_set="train_gmm"
-test_sets="dev test"
+test_sets="test"
 
 . ./cmd.sh
 [ -f ./path.sh ] && . ./path.sh;
 . ./utils/parse_options.sh
 
-# nj for dev and test
-dev_nj=$(wc -l data/dev/spk2utt | awk '{print $1}' || exit 1;)
+# nj for test
 test_nj=$(wc -l data/test/spk2utt | awk '{print $1}' || exit 1;)
 
 # Now make MFCC features.

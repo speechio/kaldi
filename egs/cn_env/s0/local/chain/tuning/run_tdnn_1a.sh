@@ -56,7 +56,7 @@ fi
 
 dir=${dir}${affix:+_$affix}
 train_set=train
-test_sets="dev test"
+test_sets="test"
 ali_dir=exp/tri3_ali
 lat_dir=exp/tri3_lat_ali
 tree_dir=exp/chain/tree
