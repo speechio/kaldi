@@ -3,7 +3,7 @@
 
 #-------------------- RESOURCES --------------------#
 ## Database
-DB=/data/disk001
+DB=/data/audio
 
 aidatatang_train=$DB/aidatatang_200zh/train
 aidatatang_dev=$DB/aidatatang_200zh/dev
@@ -21,7 +21,7 @@ AISHELL2_Android_train=$DB/AISHELL-2/Android/train
 AISHELL2_Android_dev=$DB/AISHELL-2/Android/dev
 AISHELL2_Android_test=$DB/AISHELL-2/Android/test
 
-AISHELL7=$DB/AISHELL-7/data
+mobile_0007=$DB/mobile_0007/data
 
 magicdata_train=$DB/magicdata/train
 magicdata_dev=$DB/magicdata/dev
@@ -38,7 +38,7 @@ trn_list=""
 trn_list="$trn_list AISHELL1_train AISHELL1_dev"
 trn_list="$trn_list AISHELL2_iOS_train AISHELL2_iOS_dev"
 trn_list="$trn_list AISHELL2_Android_train AISHELL2_Android_dev"
-trn_list="$trn_list AISHELL7"
+trn_list="$trn_list mobile_0007"
 trn_list="$trn_list magicdata_train magicdata_dev"
 trn_list="$trn_list mobile_2000h"
 trn_list="$trn_list primewords"
