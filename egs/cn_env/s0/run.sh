@@ -22,12 +22,12 @@ AISHELL2_Android_dev=$DB/AISHELL-2/Android/dev
 AISHELL2_Android_test=$DB/AISHELL-2/Android/test
 
 mobile_0007=$DB/mobile_0007/data
+mobile_2000h=$DB/mobile_2000h/data
 
 magicdata_train=$DB/magicdata/train
 magicdata_dev=$DB/magicdata/dev
 magicdata_test=$DB/magicdata/test
 
-mobile_2000h=$DB/mobile_2000h/data
 primewords=$DB/primewords/data
 stcmds=$DB/stcmds/data
 
@@ -37,10 +37,11 @@ trn_list=""
 #trn_list="$trn_list aidatatang_train aidatatang_dev"
 trn_list="$trn_list AISHELL1_train AISHELL1_dev"
 trn_list="$trn_list AISHELL2_iOS_train AISHELL2_iOS_dev"
+trn_list="$trn_list AISHELL2_iOS_train"
 trn_list="$trn_list AISHELL2_Android_train AISHELL2_Android_dev"
 trn_list="$trn_list mobile_0007"
-trn_list="$trn_list magicdata_train magicdata_dev"
 trn_list="$trn_list mobile_2000h"
+trn_list="$trn_list magicdata_train magicdata_dev"
 trn_list="$trn_list primewords"
 trn_list="$trn_list stcmds"
 
@@ -69,14 +70,26 @@ STEP_TRAIN_GMM=1
 STEP_TRAIN_DNN=1
 STEP_SHOW_RESULTS=1
 
-num_utts_gmm=5000
-num_utts_dnn=10000
-num_utts_test=100
+# trn setup
+num_utts_gmm=300000
+num_utts_dnn=2000000
+
+# tst setup
+num_utts_test=0
+
+test_sets=''
+if [ $num_utts_test -gt 0 ]; then
+  # use a single test set (extracted from combined testing data)
+  test_sets=test_subset_${num_utts_test}
+else
+  # use multiple test sets from testing data
+  test_sets=$tst_list 
+fi
 
 #-----------------------------------------------#
 nj=46
 gmm_stage=0
-dnn_stage=0
+dnn_stage=10
 
 . ./cmd.sh
 . ./path.sh
@@ -117,8 +130,9 @@ if [ $STEP_SUBSET_AM_DATA -eq 1 ]; then
   utils/subset_data_dir.sh data/train_all $num_utts_dnn data/train_dnn
 
   # tst set
-  utils/subset_data_dir.sh data/test_all $num_utts_test data/test
-  #utils/subset_data_dir.sh data/test_all 1000 data/test2
+  if [ $num_utts_test -gt 0 ]; then
+    utils/subset_data_dir.sh data/test_all $num_utts_test data/$test_sets
+  fi
 fi
 
 if [ $STEP_PREP_LANG -eq 1 ]; then
@@ -147,13 +161,13 @@ fi
 if [ $STEP_TRAIN_GMM -eq 1 ]; then
   local/run_gmm.sh --nj $nj --test_nj $nj \
     --stage $gmm_stage \
-    --train-set "train_gmm" --test-sets "test"
+    --train-set "train_gmm" --test-sets "$test_sets"
 fi
 
 if [ $STEP_TRAIN_DNN -eq 1 ]; then
   local/chain/run_tdnn.sh --nj $nj \
     --stage $dnn_stage \
-    --train-set "train_dnn" --test-sets "test"
+    --train-set "train_dnn" --test-sets "$test_sets"
 fi
 
 if [ $STEP_SHOW_RESULTS -eq 1 ]; then
