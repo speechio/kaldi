@@ -23,8 +23,8 @@ test_sets="test"
 decode_iter=
 
 # training options
-#num_epochs=4
-num_epochs=1 # FOR TEST PURPOSE
+num_epochs=4
+#num_epochs=1 # FOR TEST PURPOSE
 initial_effective_lrate=0.001
 final_effective_lrate=0.0001
 max_param_change=2.0
