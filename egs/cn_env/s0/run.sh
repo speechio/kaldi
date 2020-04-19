@@ -89,7 +89,7 @@ fi
 #-----------------------------------------------#
 nj=46
 gmm_stage=0
-dnn_stage=10
+dnn_stage=0
 
 . ./cmd.sh
 . ./path.sh
