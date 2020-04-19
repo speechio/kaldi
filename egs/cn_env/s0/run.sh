@@ -74,7 +74,7 @@ num_utts_dnn=10000
 num_utts_test=100
 
 #-----------------------------------------------#
-nj=20
+nj=46
 gmm_stage=0
 dnn_stage=0
 
@@ -114,11 +114,11 @@ fi
 if [ $STEP_SUBSET_AM_DATA -eq 1 ]; then
   # trn set
   utils/subset_data_dir.sh data/train_all $num_utts_gmm data/train_gmm
-  utils/subset_data_dir.sh data/train_all $num_utts_dnn data/train    # For DNN training
+  utils/subset_data_dir.sh data/train_all $num_utts_dnn data/train_dnn
 
   # tst set
-  utils/subset_data_dir.sh data/test_all $num_utts_test data/test1
-  utils/subset_data_dir.sh data/test_all $num_utts_test data/test2
+  utils/subset_data_dir.sh data/test_all $num_utts_test data/test
+  #utils/subset_data_dir.sh data/test_all 1000 data/test2
 fi
 
 if [ $STEP_PREP_LANG -eq 1 ]; then
@@ -145,15 +145,15 @@ if [ $STEP_TRAIN_LM -eq 1 ]; then
 fi
 
 if [ $STEP_TRAIN_GMM -eq 1 ]; then
-  local/run_gmm.sh --nj $nj \
+  local/run_gmm.sh --nj $nj --test_nj $nj \
     --stage $gmm_stage \
-    --train-set "train_gmm" --test-sets "test1 test2"
+    --train-set "train_gmm" --test-sets "test"
 fi
 
 if [ $STEP_TRAIN_DNN -eq 1 ]; then
   local/chain/run_tdnn.sh --nj $nj \
     --stage $dnn_stage \
-    --train-set "train" --test-sets "test1 test2"
+    --train-set "train_dnn" --test-sets "test"
 fi
 
 if [ $STEP_SHOW_RESULTS -eq 1 ]; then
