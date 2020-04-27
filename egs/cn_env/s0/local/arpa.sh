@@ -1,7 +1,7 @@
 #!/bin/sh
 
 nj=1
-stage=0
+stage=1
 debug=2
 mode=
 
@@ -10,7 +10,8 @@ mode=
 
 if [ $# -ne 5 ] && [ $# -ne 6 ]; then
     echo "arpa.sh --mode train/test [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
-    echo "  --nj default 1"
+    echo "  --nj 1(default)"
+    echo "  --stage 1(tn&ws, default) 2(training/testing)"
     echo "  <words.txt> word-table from kaldi"
     echo "  For training: arpa.sh --mode train --nj 10 3gram.arpa 3 words.txt text.txt tmp"
     echo "  For testing : arpa.sh --mode test 3gram.arpa 3 words.txt text.txt tmp PPL"
@@ -31,10 +32,12 @@ echo "`basename $0`: counting lines ..."
 n=`cat $text | wc -l`
 echo "`basename $0`: $n lines in $text"
 
+[ -d $dir ] && rm -rf $dir
 mkdir -p $dir
 text_name=`basename $text`
+processed_text=$text
 
-if [ $stage -le 0 ]; then
+if [ $stage -le 1 ]; then
     cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
 
     if [ $nj -eq 1 ]; then
@@ -69,18 +72,21 @@ if [ $stage -le 0 ]; then
         done
         echo "Merging done."
     fi
+
+    processed_text=$dir/${text_name}.tn.ws
+    echo "Processed text: $processed_text"
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 2 ]; then
     if [ $mode == "train" ]; then
         echo "Training..."
+
         command -v ngram-count 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
-        if [ -f $arpa ]; then
-            echo "WARNING: $arpa existed, overwriting."
-        fi
+        [ -f $arpa ] && echo "WARNING: $arpa existed, overwriting."
+
         cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1}' > $dir/ngram.vocab
         ## single process training
-        ngram-count -text $dir/${text_name}.tn.ws \
+        ngram-count -text $processed_text \
             -order $order -lm $arpa \
             -limit-vocab -vocab $dir/ngram.vocab \
             -unk -map-unk "<UNK>" \
@@ -108,16 +114,17 @@ if [ $stage -le 1 ]; then
 
     elif [ $mode == "test" ]; then
         echo "Testing..."
+
         command -v ngram 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         if [ ! -f $arpa ]; then
             echo "$arpa no such file"
             exit 0
         fi
 
-        ngram -debug $debug -order $order -lm $arpa -ppl $dir/${text_name}.tn.ws > $PPL
+        ngram -debug $debug -order $order -lm $arpa -ppl $processed_text > $PPL
 
         tail -n 1 $PPL
-        echo "Testing done, $text on $arpa."
+        echo "Testing done, $processed_text on $arpa."
     fi
 fi
 
