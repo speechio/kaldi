@@ -116,10 +116,7 @@ if [ $stage -le 2 ]; then
         echo "Testing..."
 
         command -v ngram 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
-        if [ ! -f $arpa ]; then
-            echo "$arpa no such file"
-            exit 0
-        fi
+        [ ! -f $arpa ] && { echo "Error: $arpa no such file"; exit 1; }
 
         ngram -debug $debug -order $order -lm $arpa -ppl $processed_text > $PPL
 
