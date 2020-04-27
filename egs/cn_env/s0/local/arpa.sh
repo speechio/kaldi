@@ -22,21 +22,44 @@ elif [ $# -eq 6 ]; then
     PPL=$6
 fi
 
+nj=45
 stage=0
 debug=2
 
 mkdir -p $dir
 text_name=`basename $text`
 
-# TN
-if [ $stage -le 1 ]; then
-    local/cn_tn.py --to_upper $text $dir/${text_name}.tn
-fi
+echo "`basename $0`: counting number of lines in <text>"
+n=`cat $text | wc -l`
+echo "`basename $0`: $n lines"
 
-# WS
-if [ $stage -le 2 ]; then
-    cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
-    local/cn_ws.py $dir/jieba.vocab $dir/${text_name}.tn $dir/${text_name}.tn.ws
+cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
+if [ $n -lt 100 ]; then
+    # TN
+    if [ $stage -le 1 ]; then
+        local/cn_tn.py --to_upper $text $dir/${text_name}.tn
+    fi
+    
+    # WS
+    if [ $stage -le 2 ]; then
+        local/cn_ws.py $dir/jieba.vocab $dir/${text_name}.tn $dir/${text_name}.tn.ws
+    fi
+else
+    split -n l/${nj} $text $dir/${text_name}_
+    for f in `ls $dir/${text_name}_*`; do
+        local/cn_tn.py --to_upper $f ${f}.tn >& ${f}.tn.log &
+    done
+    wait
+
+    for f in `ls $dir/${text_name}_*.tn`; do
+        local/cn_ws.py $dir/jieba.vocab $f ${f}.ws >& ${f}.ws.log &
+    done
+    wait
+
+    cat /dev/null > $dir/${text_name}.tn.ws
+    for f in `ls $dir/${text_name}_*.tn.ws`; do
+        cat $f >> $dir/${text_name}.tn.ws
+    done
 fi
 
 if [ $stage -le 3 ]; then
