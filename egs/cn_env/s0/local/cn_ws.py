@@ -32,8 +32,8 @@ for line in codecs.open(args.itext, 'r', 'utf8'):
 
   counter += 1
   if (counter % args.log_interval) == 0:
-    sys.stderr.write(parser.prog + ': lines done.\n'.format(counter))
+    sys.stderr.write(parser.prog + ': {} lines done.\n'.format(counter))
 
-sys.stderr.write(parser.prog + ': lines done in total.\n'.format(counter))
+sys.stderr.write(parser.prog + ': {} lines done in total.\n'.format(counter))
 
 fo.close()
