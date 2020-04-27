@@ -1,69 +1,79 @@
 #!/bin/sh
+
+nj=1
+stage=0
+debug=2
+mode=
+
+. path.sh
+. utils/parse_options.sh
+
 if [ $# -ne 5 ] && [ $# -ne 6 ]; then
-    echo "arpa.sh <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
-    echo "  words.txt is word table from kaldi"
-    echo "  For training: arpa.sh 3gram.arpa 3 words.txt text.txt tmp"
-    echo "  For testing : arpa.sh 3gram.arpa 3 words.txt text.txt tmp PPL"
+    echo "arpa.sh --mode train/test [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
+    echo "  --nj default 1"
+    echo "  <words.txt> word-table from kaldi"
+    echo "  For training: arpa.sh --mode train --nj 10 3gram.arpa 3 words.txt text.txt tmp"
+    echo "  For testing : arpa.sh --mode test 3gram.arpa 3 words.txt text.txt tmp PPL"
     exit 1;
 fi
-
 
 arpa=$1
 order=$2
 vocab=$3
 text=$4
 dir=$5
-
-mode=
-if [ $# -eq 5 ]; then
-    mode=train
-elif [ $# -eq 6 ]; then
-    mode=test
+PPL=
+if [ $# -eq 6 ]; then
     PPL=$6
 fi
 
-nj=45
-stage=0
-debug=2
+echo "`basename $0`: counting lines ..."
+n=`cat $text | wc -l`
+echo "`basename $0`: $n lines in $text"
 
 mkdir -p $dir
 text_name=`basename $text`
 
-echo "`basename $0`: counting number of lines in <text>"
-n=`cat $text | wc -l`
-echo "`basename $0`: $n lines"
+if [ $stage -le 0 ]; then
+    cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
 
-cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
-if [ $n -lt 100 ]; then
-    # TN
-    if [ $stage -le 1 ]; then
+    if [ $nj -eq 1 ]; then
+        echo "TN..."
         local/cn_tn.py --to_upper $text $dir/${text_name}.tn
-    fi
-    
-    # WS
-    if [ $stage -le 2 ]; then
+        echo "TN done."
+
+        echo "WS..."
         local/cn_ws.py $dir/jieba.vocab $dir/${text_name}.tn $dir/${text_name}.tn.ws
+        echo "WS done."
+    else
+        # parallel tn & ws
+        echo "TN..."
+        split -n l/${nj} $text $dir/${text_name}_
+        for f in `ls $dir/${text_name}_*`; do
+            local/cn_tn.py --to_upper $f ${f}.tn >& ${f}.tn.log &
+        done
+        wait
+        echo "TN done."
+    
+        echo "WS..."
+        for f in `ls $dir/${text_name}_*.tn`; do
+            local/cn_ws.py $dir/jieba.vocab $f ${f}.ws >& ${f}.ws.log &
+        done
+        wait
+        echo "WS done."
+    
+        echo "Merging..."
+        cat /dev/null > $dir/${text_name}.tn.ws
+        for f in `ls $dir/${text_name}_*.tn.ws`; do
+            cat $f >> $dir/${text_name}.tn.ws
+        done
+        echo "Merging done."
     fi
-else
-    split -n l/${nj} $text $dir/${text_name}_
-    for f in `ls $dir/${text_name}_*`; do
-        local/cn_tn.py --to_upper $f ${f}.tn >& ${f}.tn.log &
-    done
-    wait
-
-    for f in `ls $dir/${text_name}_*.tn`; do
-        local/cn_ws.py $dir/jieba.vocab $f ${f}.ws >& ${f}.ws.log &
-    done
-    wait
-
-    cat /dev/null > $dir/${text_name}.tn.ws
-    for f in `ls $dir/${text_name}_*.tn.ws`; do
-        cat $f >> $dir/${text_name}.tn.ws
-    done
 fi
 
-if [ $stage -le 3 ]; then
+if [ $stage -le 1 ]; then
     if [ $mode == "train" ]; then
+        echo "Training..."
         command -v ngram-count 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         if [ -f $arpa ]; then
             echo "WARNING: $arpa existed, overwriting."
@@ -94,8 +104,10 @@ if [ $stage -le 3 ]; then
         #    -kndiscount -interpolate \
         #    -lm $arpa
 
-        echo "training done, $arpa."
+        echo "Training done, $arpa."
+
     elif [ $mode == "test" ]; then
+        echo "Testing..."
         command -v ngram 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         if [ ! -f $arpa ]; then
             echo "$arpa no such file"
@@ -105,7 +117,7 @@ if [ $stage -le 3 ]; then
         ngram -debug $debug -order $order -lm $arpa -ppl $dir/${text_name}.tn.ws > $PPL
 
         tail -n 1 $PPL
-        echo "testing done, $text on $arpa."
+        echo "Testing done, $text on $arpa."
     fi
 fi
 
