@@ -8,8 +8,10 @@ mode=
 . path.sh
 . utils/parse_options.sh
 
+
 if [ $# -ne 5 ] && [ $# -ne 6 ]; then
-    echo "arpa.sh --mode train/test [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
+    echo "arpa.sh --mode <mode> [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
+    echo "  --mode: train / test / prune (no default, must specified explicitly"
     echo "  --nj 1(default)"
     echo "  --stage 1(tn&ws, default) 2(training/testing)"
     echo "  <words.txt> word-table from kaldi"
@@ -27,6 +29,8 @@ PPL=
 if [ $# -eq 6 ]; then
     PPL=$6
 fi
+
+thresholds="1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11 1e-12"
 
 echo "`basename $0`: counting lines ..."
 n=`cat $text | wc -l`
@@ -122,6 +126,34 @@ if [ $stage -le 2 ]; then
 
         tail -n 1 $PPL
         echo "Testing done, $processed_text on $arpa."
+
+    elif [ $mode == "prune" ]; then
+        echo "Pruning ... "
+
+        command -v ngram 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
+        [ ! -f $arpa ] && { echo "Error: $arpa no such file"; exit 1; }
+
+        for x in $thresholds; do
+            model=$dir/prune${x}.`basename $arpa`
+            ngram -debug $debug -order $order -lm $arpa -prune $x -write-lm $model >& $dir/prune${x}.log &
+        done
+        wait
+
+        echo "Start tesing pruned models"
+        echo "----------------"
+        ngram -debug $debug -order $order -lm $arpa -ppl $processed_text > $dir/raw.ppl
+        du -h $arpa; echo -n "$dir/raw.ppl: "; tail -n 1 $dir/raw.ppl
+
+        for x in $thresholds; do
+            echo "----------------"
+            model=$dir/prune${x}.`basename $arpa`
+            ppl=$dir/prune${x}.ppl
+            ngram -debug $debug -order $order -lm $model -ppl $processed_text > $ppl
+            du -h $model; echo -n "$ppl:"; tail -n 1 $ppl;
+        done
+    else
+        echo "unsupported mode: $mode"
+        exit 0
     fi
 fi
 
