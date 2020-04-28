@@ -9,14 +9,15 @@ mode=
 . utils/parse_options.sh
 
 
-if [ $# -ne 5 ] && [ $# -ne 6 ]; then
-    echo "arpa.sh --mode <mode> [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir> [PPL]"
+if [ $# -ne 5 ]; then
+    echo "arpa.sh --mode <mode> [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir>"
     echo "  --mode: train / test / prune (no default, must specified explicitly"
     echo "  --nj 1(default)"
     echo "  --stage 1(tn&ws, default) 2(training/testing)"
     echo "  <words.txt> word-table from kaldi"
-    echo "  For training: arpa.sh --mode train --nj 10 3gram.arpa 3 words.txt text.txt tmp"
-    echo "  For testing : arpa.sh --mode test 3gram.arpa 3 words.txt text.txt tmp PPL"
+    echo "  For training: arpa.sh --mode train --nj 10 4gram.arpa 4 words.txt trn.txt wdir"
+    echo "  For testing : arpa.sh --mode test  --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
+    echo "  For pruning : arpa.sh --mode prune --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
     exit 1;
 fi
 
@@ -25,10 +26,6 @@ order=$2
 vocab=$3
 text=$4
 dir=$5
-PPL=
-if [ $# -eq 6 ]; then
-    PPL=$6
-fi
 
 thresholds="1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11 1e-12"
 
@@ -122,9 +119,9 @@ if [ $stage -le 2 ]; then
         command -v ngram 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         [ ! -f $arpa ] && { echo "Error: $arpa no such file"; exit 1; }
 
-        ngram -debug $debug -order $order -lm $arpa -ppl $processed_text > $PPL
+        ngram -debug $debug -order $order -lm $arpa -ppl $processed_text > $dir/PPL
 
-        tail -n 1 $PPL
+        tail -n 1 $dir/PPL
         echo "Testing done, $processed_text on $arpa."
 
     elif [ $mode == "prune" ]; then
