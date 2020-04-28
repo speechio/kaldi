@@ -13,11 +13,12 @@ if [ $# -ne 5 ]; then
     echo "arpa.sh --mode <mode> [--nj <nj>] <arpa> <ngram-order> <words.txt> <text> <working_dir>"
     echo "  --mode: train / test / prune (no default, must specified explicitly"
     echo "  --nj 1(default)"
-    echo "  --stage 1(tn&ws, default) 2(training/testing)"
+    echo "  --stage: 1(tn&ws processing) 2(train/test/prune)"
     echo "  <words.txt> word-table from kaldi"
     echo "  For training: arpa.sh --mode train --nj 10 4gram.arpa 4 words.txt trn.txt wdir"
     echo "  For testing : arpa.sh --mode test  --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
     echo "  For pruning : arpa.sh --mode prune --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
+    echo "  Be carefull, existing <working_dir> will be deleted."
     exit 1;
 fi
 
