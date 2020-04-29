@@ -5,8 +5,8 @@ stage=1
 debug=2
 mode=
 
-. path.sh
-. utils/parse_options.sh
+. ./path.sh
+. ./utils/parse_options.sh
 
 
 if [ $# -ne 5 ]; then
@@ -28,7 +28,8 @@ vocab=$3
 text=$4
 dir=$5
 
-thresholds="1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11 1e-12"
+thresholds="1e-8 1e-9 1e-10 1e-11 1e-12"
+#thresholds="1e-5 1e-6 1e-7"
 
 echo "`basename $0`: counting lines ..."
 n=`cat $text | wc -l`
