@@ -30,6 +30,8 @@ dir=$5
 
 thresholds="1e-8 1e-9 1e-10 1e-11 1e-12"
 #thresholds="1e-5 1e-6 1e-7"
+trn_opts=""
+#trn_opts="-gt2min 5 -gt2max 20 -gt3min 5 -gt3max 20 -gt4min 5 -gt4max 20"
 
 echo "`basename $0`: counting lines ..."
 n=`cat $text | wc -l`
@@ -94,7 +96,7 @@ if [ $stage -le 2 ]; then
             -limit-vocab -vocab $dir/ngram.vocab \
             -unk -map-unk "<UNK>" \
             -kndiscount -interpolate \
-            -debug $debug
+            -debug $debug $trn_opts
 
         ## use this branch if you have large enough memory for parallel counting
         #mkdir -p $dir/{splits,counts,merge}
