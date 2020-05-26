@@ -354,9 +354,9 @@ int main(int argc, char *argv[]) {
                                               num_samp_input + num_samp_rir - 1));
     Matrix<BaseFloat> out_matrix(num_output_channels, num_samp_output);
 
-    // TODO(jiayu): make this truely random from run to run
-    //BaseFloat start_time_noise = kaldi::RandInt(0, noise.Dim()-1) / (1.0 * samp_freq_input);
-    BaseFloat start_time_noise = 0.0f;
+    std::srand(time(NULL));
+    BaseFloat noise_start_position = kaldi::RandInt(0, 100) / 100.0f;
+    //BaseFloat noise_start_position = 0.0f;
 
     for (int32 output_channel = 0; output_channel < num_output_channels; output_channel++) {
       Vector<BaseFloat> input(num_samp_input);
@@ -388,8 +388,8 @@ int main(int argc, char *argv[]) {
           noise.Resize(additive_signal_matrices[i].NumCols());
           noise.CopyRowFromMat(additive_signal_matrices[i], this_noise_channel);
           if (background_mode) {
-
-            AddNoiseBackground(&noise, snr_vector[i], start_time_noise, start_time_vector[i], 
+            BaseFloat noise_start_time = noise_start_position * noise.Dim() / samp_freq_input; 
+            AddNoiseBackground(&noise, snr_vector[i], noise_start_time, start_time_vector[i], 
                                samp_freq_input, early_energy, &input);
           } else {
             AddNoise(&noise, snr_vector[i], start_time_vector[i],
