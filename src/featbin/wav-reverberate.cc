@@ -113,6 +113,37 @@ void AddNoise(Vector<BaseFloat> *noise, BaseFloat snr_db,
   AddVectorsWithOffset(*noise, offset, signal);
 }
 
+
+/* <jiayu */
+void AddVectorsRollOver(const VectorBase<BaseFloat> &noise, int32 offset1, Vector<BaseFloat> *signal, int32 offset2) {
+  int32 n1 = noise.Dim();
+  int32 n2 = signal->Dim();
+  KALDI_LOG << "noise:" << offset1 << "/" << n1 << " signal:" << offset2 << "/" << n2; 
+  if (offset2 > n2) {
+    KALDI_WARN << "start time:"<< offset2 << " is larger than signal length:" << n2 << ", skipping.";
+    return;
+  }
+  for (int32 p1 = offset1, p2 = offset2; p2 < signal->Dim(); p1++, p2++) {
+    (*signal)(p2) += noise(p1 % n1);
+  }
+}
+
+void AddNoiseBackground(Vector<BaseFloat> *noise, BaseFloat snr_db,
+                        BaseFloat time1, BaseFloat time2, BaseFloat samp_freq,
+                        BaseFloat signal_power, Vector<BaseFloat> *signal) {
+  float noise_power = VecVec(*noise, *noise) / noise->Dim();
+  float scale_factor = sqrt(pow(10, -snr_db / 10) * signal_power / noise_power);
+  noise->Scale(scale_factor);
+  KALDI_VLOG(1) << "Noise signal is being scaled with " << scale_factor
+                << " to generate output with SNR " << snr_db << "db\n";
+
+  int32 offset1 = time1 * samp_freq;
+  int32 offset2 = time2 * samp_freq;
+
+  AddVectorsRollOver(*noise, offset1, signal, offset2);
+}
+/* jiayu> */
+
 /*
    This function converts comma-spearted string into float vector.
 */
@@ -156,6 +187,8 @@ int main(int argc, char *argv[]) {
     bool normalize_output = true;
     BaseFloat volume = 0;
     BaseFloat duration = 0;
+
+    bool background_mode = false;
 
     po.Register("multi-channel-output", &multi_channel_output,
                 "Specifies if the output should be multi-channel or not");
@@ -212,6 +245,11 @@ int main(int argc, char *argv[]) {
                 "after reverberating and possibly adding noise. "
                 "If you set this option to a nonzero value, it will be as "
                 "if you had also specified --normalize-output=false.");
+
+    po.Register("background-mode", &background_mode,
+                "background-mode randomly select a time point from the noise,"
+                "and start unrolling the noise all over the signal,"
+                "if the noise is reach ends, it rewind the noise postion to beginning.");
 
     po.Read(argc, argv);
     if (po.NumArgs() != 2) {
@@ -316,6 +354,10 @@ int main(int argc, char *argv[]) {
                                               num_samp_input + num_samp_rir - 1));
     Matrix<BaseFloat> out_matrix(num_output_channels, num_samp_output);
 
+    // TODO(jiayu): make this truely random from run to run
+    //BaseFloat start_time_noise = kaldi::RandInt(0, noise.Dim()-1) / (1.0 * samp_freq_input);
+    BaseFloat start_time_noise = 0.0f;
+
     for (int32 output_channel = 0; output_channel < num_output_channels; output_channel++) {
       Vector<BaseFloat> input(num_samp_input);
       input.CopyRowFromMat(input_matrix, input_channel);
@@ -345,8 +387,14 @@ int main(int argc, char *argv[]) {
         for (int32 i = 0; i < additive_signal_matrices.size(); i++) {
           noise.Resize(additive_signal_matrices[i].NumCols());
           noise.CopyRowFromMat(additive_signal_matrices[i], this_noise_channel);
-          AddNoise(&noise, snr_vector[i], start_time_vector[i],
-                    samp_freq_input, early_energy, &input);
+          if (background_mode) {
+
+            AddNoiseBackground(&noise, snr_vector[i], start_time_noise, start_time_vector[i], 
+                               samp_freq_input, early_energy, &input);
+          } else {
+            AddNoise(&noise, snr_vector[i], start_time_vector[i],
+                      samp_freq_input, early_energy, &input);
+          }
         }
       }
 
