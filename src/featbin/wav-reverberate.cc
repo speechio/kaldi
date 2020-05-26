@@ -189,6 +189,7 @@ int main(int argc, char *argv[]) {
     BaseFloat duration = 0;
 
     bool background_mode = false;
+    bool random_noise_position = false;
 
     po.Register("multi-channel-output", &multi_channel_output,
                 "Specifies if the output should be multi-channel or not");
@@ -247,9 +248,11 @@ int main(int argc, char *argv[]) {
                 "if you had also specified --normalize-output=false.");
 
     po.Register("background-mode", &background_mode,
-                "background-mode randomly select a time point from the noise,"
-                "and start unrolling the noise all over the signal,"
+                "roll over the noise to fill the signal,"
                 "if the noise is reach ends, it rewind the noise postion to beginning.");
+
+    po.Register("random-noise-position", &random_noise_position,
+                "use random noise start position rather than from the noise beginning.");
 
     po.Read(argc, argv);
     if (po.NumArgs() != 2) {
@@ -354,9 +357,11 @@ int main(int argc, char *argv[]) {
                                               num_samp_input + num_samp_rir - 1));
     Matrix<BaseFloat> out_matrix(num_output_channels, num_samp_output);
 
-    std::srand(time(NULL));
-    BaseFloat noise_start_position = kaldi::RandInt(0, 100) / 100.0f;
-    //BaseFloat noise_start_position = 0.0f;
+    BaseFloat noise_start_position = 0.0f;
+    if (random_noise_position) {
+      std::srand(time(NULL));
+      noise_start_position = kaldi::RandInt(0, 100) / 100.0f;
+    }
 
     for (int32 output_channel = 0; output_channel < num_output_channels; output_channel++) {
       Vector<BaseFloat> input(num_samp_input);
