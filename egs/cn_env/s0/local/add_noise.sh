@@ -1,8 +1,4 @@
 #!/bin/sh
-
-. ./path.sh
-. ./utils/parse_options.sh
-
 if [ $# -ne 5 ]; then
     echo "add_noise.sh <wav.list> <noise.list> <snr_lower> <snr_upper> <working_dir>"
     echo "  --normalize-output false(default)"
@@ -16,6 +12,9 @@ normalize_output=false
 background_mode=true
 random_noise_position=true
 
+. ./path.sh
+. ./utils/parse_options.sh
+
 wav_list=$1
 noise_list=$2
 snr_lower=$3
@@ -23,9 +22,6 @@ snr_upper=$4
 dir=$5
 
 mkdir -p $dir
-
-snr_seq=`seq ${snr_lower} ${snr_upper}`
-
 for f in `cat $wav_list`; do
     noise=`shuf $noise_list | head -n 1`
     snr=`seq ${snr_lower} ${snr_upper} | shuf | head -n 1`
