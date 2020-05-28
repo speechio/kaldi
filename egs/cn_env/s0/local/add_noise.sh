@@ -22,16 +22,21 @@ snr_upper=$4
 dir=$5
 
 mkdir -p $dir
+
+opts="--background-mode=$background_mode --normalize-output=$normalize_output --random-noise-position=$random_noise_position"
+
 for f in `cat $wav_list`; do
+    i=`basename $f`
+    key="${i%.*}"
+    ext="${i##*.}"
+    #echo $f, $filename, $key, $ext
+    
     noise=`shuf $noise_list | head -n 1`
     snr=`seq ${snr_lower} ${snr_upper} | shuf | head -n 1`
-    iname=`basename $f`
-    oname=SNR${snr}_$iname
-    echo "adding noise: $noise to audio: $f with snr: $snr, destination:$dir/$oname"
-    wav-reverberate \
-        --background-mode=$background_mode --normalize-output=$normalize_output \
-        --additive-signals="$noise" --snrs="$snr" --random-noise-position=$random_noise_position \
-        --start-times="0" \
-        $f $dir/$oname
+    noise_str=SNR${snr}dB
+
+    o=${key}_${noise_str}.${ext} # use noise_str as suffix to keep sorted key order unchanged
+    echo "audio:$f + noise:$noise (snr:${snr}dB) --> $dir/$o"
+    wav-reverberate $opts --additive-signals="$noise" --snrs="$snr" --start-times=0 $f $dir/$o
 done
 
