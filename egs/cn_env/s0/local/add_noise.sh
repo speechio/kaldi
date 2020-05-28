@@ -17,7 +17,7 @@ if [ $# -ne 5 ]; then
     echo "  --background-mode true(default)"
     echo "  --random-noise-position true(default)"
     echo "e.g: add_noise.sh wav.list noise.list 0 10 wdir"
-    echo "e.g: add_noise.sh --scp true wav.scp noise.list 0 10 wdir"
+    echo "e.g: add_noise.sh wav.scp  noise.list 0 10 wdir"
     exit 1;
 fi
 
