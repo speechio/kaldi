@@ -118,7 +118,7 @@ void AddNoise(Vector<BaseFloat> *noise, BaseFloat snr_db,
 void AddVectorsRollOver(const VectorBase<BaseFloat> &noise, int32 offset1, Vector<BaseFloat> *signal, int32 offset2) {
   int32 n1 = noise.Dim();
   int32 n2 = signal->Dim();
-  KALDI_LOG << "noise:" << offset1 << "/" << n1 << " signal:" << offset2 << "/" << n2; 
+  KALDI_VLOG(1) << "noise start pos:" << offset1 << "/" << n1 << " signal start pos:" << offset2 << "/" << n2; 
   if (offset2 > n2) {
     KALDI_WARN << "start time:"<< offset2 << " is larger than signal length:" << n2 << ", skipping.";
     return;
