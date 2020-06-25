@@ -39,46 +39,12 @@ echo "`basename $0`: $n lines in $text"
 
 [ -d $dir ] && rm -rf $dir
 mkdir -p $dir
-text_name=`basename $text`
+text_name=`basename $text .txt`
 processed_text=$text
 
 if [ $stage -le 1 ]; then
-    cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1, 99}' > $dir/jieba.vocab
-
-    if [ $nj -eq 1 ]; then
-        echo "TN..."
-        local/cn_tn.py --to_upper $text $dir/${text_name}.tn
-        echo "TN done."
-
-        echo "WS..."
-        local/cn_ws.py $dir/jieba.vocab $dir/${text_name}.tn $dir/${text_name}.tn.ws
-        echo "WS done."
-    else
-        # parallel tn & ws
-        echo "TN..."
-        split -n l/${nj} $text $dir/${text_name}_
-        for f in `ls $dir/${text_name}_*`; do
-            local/cn_tn.py --to_upper $f ${f}.tn >& ${f}.tn.log &
-        done
-        wait
-        echo "TN done."
-    
-        echo "WS..."
-        for f in `ls $dir/${text_name}_*.tn`; do
-            local/cn_ws.py $dir/jieba.vocab $f ${f}.ws >& ${f}.ws.log &
-        done
-        wait
-        echo "WS done."
-    
-        echo "Merging..."
-        cat /dev/null > $dir/${text_name}.tn.ws
-        for f in `ls $dir/${text_name}_*.tn.ws`; do
-            cat $f >> $dir/${text_name}.tn.ws
-        done
-        echo "Merging done."
-    fi
-
-    processed_text=$dir/${text_name}.tn.ws
+    sh local/cn_tp.sh --nj $nj $vocab $text $dir
+    processed_text=$dir/${text_name}_tn_ws.txt
     echo "Processed text: $processed_text"
 fi
 
@@ -89,12 +55,12 @@ if [ $stage -le 2 ]; then
         command -v ngram-count 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         [ -f $arpa ] && echo "WARNING: $arpa existed, overwriting."
 
-        cat $vocab | grep -v '<eps>' | grep -v '#0' | awk '{print $1}' > $dir/ngram.vocab
+        cat $vocab | grep -v '<eps>' | grep -v '#0' | grep -v '<unk>' | grep -v '<UNK>' | grep -v '<s>' | grep -v '</s>' | awk '{print $1}' > $dir/ngram.vocab
         ## single process training
         ngram-count -text $processed_text \
             -order $order -lm $arpa \
             -limit-vocab -vocab $dir/ngram.vocab \
-            -unk -map-unk "<UNK>" \
+            -unk -map-unk "<unk>" \
             -kndiscount -interpolate \
             -debug $debug $trn_opts
 
