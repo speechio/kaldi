@@ -7,7 +7,7 @@ nj=1
 
 # CN Text Processing
 if [ $# -ne 3 ]; then
-    echo "cn_tp.sh [--nj <nj>] [--stage <stage>] <vocab.txt> <text.txt> <working_dir>"
+    echo "cn_tp.sh [--nj <nj>] <vocab.txt> <text.txt> <working_dir>"
     exit 1;
 fi
 
