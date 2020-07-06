@@ -298,6 +298,7 @@ int main(int argc, char *argv[]) {
       }
     }
     timing_stats.Print(online);
+    timing_stats.Print(false);
 
     KALDI_LOG << "Decoded " << num_done << " utterances, "
               << num_err << " with errors.";
