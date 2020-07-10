@@ -19,7 +19,7 @@ jieba.set_dictionary(args.word_seg_vocab)
 fo = codecs.open(args.otext, 'w+', 'utf8')
 for line in codecs.open(args.itext, 'r', 'utf8'):
   if args.has_key:
-    key,sentence = line.strip().split('\t',1)
+    key,sentence = line.strip().split(maxsplit=1)
   else:
     sentence = line.strip()
 
