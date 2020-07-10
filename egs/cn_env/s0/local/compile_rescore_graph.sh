@@ -2,8 +2,8 @@ mode=
 . utils/parse_options.sh
 
 if [ $# -ne 3 ]; then
-    echo "arpa2fst.sh --mode fst   <G.arpa> <words.txt> <Gr.fst>"
-    echo "arpa2fst.sh --mode carpa <G.arpa> <words.txt> <G.carpa>"
+    echo "compile_rescore_graph.sh --mode fst   <G.arpa> <words.txt> <Gr.fst>"
+    echo "compile_rescore_graph.sh --mode carpa <G.arpa> <words.txt> <G.carpa>"
     exit 1;
 fi
 
