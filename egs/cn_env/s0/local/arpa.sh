@@ -18,7 +18,7 @@ if [ $# -ne 5 ]; then
     echo "  For training: arpa.sh --mode train --nj 10 4gram.arpa 4 words.txt trn.txt wdir"
     echo "  For testing : arpa.sh --mode test  --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
     echo "  For pruning : arpa.sh --mode prune --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
-    echo "  Be carefull, existing <working_dir> will be deleted."
+    #echo "  Be carefull, existing <working_dir> will be deleted."
     exit 1;
 fi
 
@@ -33,11 +33,14 @@ thresholds="1e-8 1e-9 1e-10 1e-11 1e-12"
 trn_opts=""
 #trn_opts="-gt2min 5 -gt2max 20 -gt3min 5 -gt3max 20 -gt4min 5 -gt4max 20"
 
+kenlm_opts="-o $order -S 50% --prune 0 1 1 1"
+
 echo "`basename $0`: counting lines ..."
 n=`cat $text | wc -l`
 echo "`basename $0`: $n lines in $text"
 
-[ -d $dir ] && rm -rf $dir
+#[ -d $dir ] && rm -rf $dir
+
 mkdir -p $dir
 text_name=`basename $text .txt`
 processed_text=$text
@@ -52,34 +55,21 @@ if [ $stage -le 2 ]; then
     if [ $mode == "train" ]; then
         echo "Training..."
 
-        command -v ngram-count 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
+        #command -v ngram-count 1>/dev/null 2>&1 || { echo "Error: make sure your PATH can find SRILM's binaries"; exit 1; }
         [ -f $arpa ] && echo "WARNING: $arpa existed, overwriting."
 
         cat $vocab | grep -v '<eps>' | grep -v '#0' | grep -v '<unk>' | grep -v '<UNK>' | grep -v '<s>' | grep -v '</s>' | awk '{print $1}' > $dir/ngram.vocab
-        ## single process training
-        ngram-count -text $processed_text \
-            -order $order -lm $arpa \
-            -limit-vocab -vocab $dir/ngram.vocab \
-            -unk -map-unk "<unk>" \
-            -kndiscount -interpolate \
-            -debug $debug $trn_opts
-
-        ## use this branch if you have large enough memory for parallel counting
-        #mkdir -p $dir/{splits,counts,merge}
-
-        #split -l 1000000 $dir/${text_name}.tn.ws $dir/splits/
-
-        #ls $dir/splits/* > $dir/splits.list
-        #$SRILM_SCRIPT/make-batch-counts $dir/splits.list 3 cat $dir/counts \
-        #    -order $order -limit-vocab -vocab $dir/ngram.vocab 
-
-        #ls $dir/counts/*.gz > $dir/counts.list
-        #$SRILM_SCRIPT/merge-batch-counts $dir/merge $dir/counts.list
-
-        #$SRILM_SCRIPT/make-big-lm -read $dir/merge/*.gz \
-        #    -order $order -limit-vocab -vocab $dir/ngram.vocab \
+        ## srilm training
+        #ngram-count -text $processed_text \
+        #    -order $order -lm $arpa \
+        #    -limit-vocab -vocab $dir/ngram.vocab \
+        #    -unk -map-unk "<unk>" \
         #    -kndiscount -interpolate \
-        #    -lm $arpa
+        #    -debug $debug $trn_opts
+
+        # KenLM training: cat vocab & text together for strictly fixed vocabulary in arpa
+        cat $dir/ngram.vocab $processed_text \
+            | lmplz $kenlm_opts --limit_vocab_file $dir/ngram.vocab > $arpa
 
         echo "Training done, $arpa."
 
