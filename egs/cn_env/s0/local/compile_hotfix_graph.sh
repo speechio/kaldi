@@ -14,12 +14,10 @@ dir=$3
 
 mkdir -p $dir
 
-name=`basename $hotfix_list .list`
-
-cat $vocab | grep -v '<eps>' | grep -v '#0' | grep -v '<unk>' | grep -v '<UNK>' | grep -v '<s>' | grep -v '</s>' | awk '{print $1, 99}' > $dir/jieba.vocab
+name=`basename $hotfix_list .txt`
 
 # here the "--has_key" actually skip the hotfix weight field
-python3 local/cn_ws.py --has_key $dir/jieba.vocab $hotfix_list $dir/${name}_ws.list
+sh local/cn_tp.sh --has_key true $vocab $hotfix_list $dir
 
-utils/sym2int.pl --map-oov "<unk>" -f 2- $vocab $dir/${name}_ws.list > $dir/${name}_int.list
+utils/sym2int.pl --map-oov "<unk>" -f 2- $vocab $dir/${name}_tn_ws.txt > $dir/${name}_int.txt
 
