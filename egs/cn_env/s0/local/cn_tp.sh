@@ -17,7 +17,7 @@ text=$2
 dir=$3
 
 opts=""
-if [ $has_key ]; then
+if [ "$has_key" = "true" ]; then
     opts="--has_key"
 fi
 
