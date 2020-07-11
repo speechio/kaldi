@@ -21,3 +21,5 @@ sh local/cn_tp.sh --has_key true $vocab $hotfix_list $dir
 
 utils/sym2int.pl --map-oov "<unk>" -f 2- $vocab $dir/${name}_tn_ws.txt > $dir/${name}_int.txt
 
+compile-hotfix-graph $dir/${name}_int.txt $dir/${name}.bin $dir/${name}.dot
+
