@@ -1,4 +1,5 @@
 #!/bin/sh
+KALDI_ROOT=/home/speechio/work/kaldi
 
 nj=1
 normalize_output=false
@@ -7,8 +8,8 @@ random_noise_position=true
 append_suffix=""
 append_snr=false
 
-. ./path.sh
-. ./utils/parse_options.sh
+#. $KALDI_ROOT/egs/wsj/s5/path.sh
+. $KALDI_ROOT/egs/wsj/s5/utils/parse_options.sh
 
 if [ $# -ne 5 ]; then
     echo "add_noise.sh <wav.list/wav.scp> <noise.list> <snr_lower> <snr_upper> <dest_dir>"
@@ -73,7 +74,7 @@ for job in `ls $wdir/job_*`; do
         fi
     
         o=${key}.${ext}
-        wav-reverberate $opts --additive-signals="$noise" --snrs="$snr" --start-times=0 $f $dir/$o
+        $KALDI_ROOT/src/featbin/wav-reverberate $opts --additive-signals="$noise" --snrs="$snr" --start-times=0 $f $dir/$o
         echo -e "DONE=$n\tKEY=${key}\tFILE=$dir/$o\tRAW=$f\tSNR=$snr\tNOISE=$noise"
         n=$((n+1))
     done < $job >& $wdir/log.`basename $job` &
