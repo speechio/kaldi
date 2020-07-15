@@ -177,7 +177,6 @@ EOF
   steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig --config-dir $dir/configs/
 fi
 
-exit 0;
 
 if [ $stage -le 11 ]; then
   steps/nnet3/chain/train.py --stage $train_stage \
