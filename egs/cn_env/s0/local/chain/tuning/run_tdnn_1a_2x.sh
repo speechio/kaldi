@@ -1,39 +1,44 @@
 #!/bin/bash
+
+# results
+# local/chain/compare_wer.sh exp/chain/tdnn_1a
+# Model                  tdnn_1a
+# Num. of params             19.3M
+# WER(%)                     8.33
+# Final train prob        -0.0566
+# Final valid prob        -0.0595
+# Final train prob (xent)   -0.6346
+# Final valid prob (xent)   -0.6316
+
 set -e
 
-# 2a is as 1a, using CNN + TDNNF architecture
-
-# ---------- CONFIG ---------- #
-nj=20
+# configs for 'chain'
+affix=2x
 stage=0
 train_stage=-10
 get_egs_stage=-10
-dir=exp/chain/tdnn_2a
+dir=exp/chain/tdnn_1a
 train_set="train"
 test_sets="test"
-affix=
-tree_affix=
 decode_iter=
 
 # training options
 num_epochs=4
-initial_effective_lrate=0.00015
-final_effective_lrate=0.000015
+#num_epochs=1 # FOR TEST PURPOSE
+initial_effective_lrate=0.001
+final_effective_lrate=0.0001
 max_param_change=2.0
-num_jobs_initial=3
-num_jobs_final=16
-num_chunk_per_minibatch=64  # minibatch_size
-frames_per_iter=2500000
-frames_per_eg=150,110,100
-leaky_hmm_coefficient=0.1
-l2_regularize=0.0
+final_layer_normalize_target=0.5
+num_jobs_initial=4
+num_jobs_final=2
+nj=20
+minibatch_size=128
+frames_per_eg=150,110,90
 remove_egs=true
 common_egs_dir=
 xent_regularize=0.1
-dropout_schedule='0,0@0.20,0.5@0.50,0'
 
-# ---------- END OF CONFIG ---------- #
-
+# End configuration section.
 echo "$0 $@"  # Print the command line for logging
 
 . ./cmd.sh
@@ -121,81 +126,70 @@ fi
 
 if [ $stage -le 10 ]; then
   echo "$0: creating neural net configs using the xconfig parser";
-
-  num_targets=$(tree-info $tree_dir/tree | grep num-pdfs | awk '{print $2}')
-  learning_rate_factor=$(echo "print (0.5/$xent_regularize)" | python)
-  cnn_opts="l2-regularize=0.01"
-  affine_opts="l2-regularize=0.008 dropout-proportion=0.0 dropout-per-dim=true dropout-per-dim-continuous=true"
-  tdnnf_first_opts="l2-regularize=0.008 dropout-proportion=0.0 bypass-scale=0.0"
-  tdnnf_opts="l2-regularize=0.008 dropout-proportion=0.0 bypass-scale=0.75"
-  linear_opts="l2-regularize=0.008 orthonormal-constraint=-1.0"
-  prefinal_opts="l2-regularize=0.008"
-  output_opts="l2-regularize=0.005"
+  num_targets=$(tree-info ${tree_dir}/tree | grep num-pdfs | awk '{print $2}')
+  learning_rate_factor=$(echo "print 0.5/$xent_regularize" | python)
+  opts="l2-regularize=0.002"
+  linear_opts="orthonormal-constraint=1.0"
+  output_opts="l2-regularize=0.0005 bottleneck-dim=512"
 
   mkdir -p $dir/configs
   cat <<EOF > $dir/configs/network.xconfig
-
   input dim=40 name=input
 
-  # MFCC to filterbank
-  idct-layer name=idct input=input dim=40 cepstral-lifter=22 affine-transform-file=$dir/configs/idct.mat
-  batchnorm-component name=idct-batchnorm input=idct
+  # please note that it is important to have input layer with the name=input
+  # as the layer immediately preceding the fixed-affine-layer to enable
+  # the use of short notation for the descriptor
+  fixed-affine-layer name=lda input=Append(-2,-1,0,1,2) affine-transform-file=$dir/configs/lda.mat
 
-  # CNN layers
-  conv-relu-batchnorm-layer name=cnn1 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
-  conv-relu-batchnorm-layer name=cnn2 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
-  conv-relu-batchnorm-layer name=cnn3 $cnn_opts height-in=40 height-out=20 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
-  conv-relu-batchnorm-layer name=cnn4 $cnn_opts height-in=20 height-out=20 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
-  conv-relu-batchnorm-layer name=cnn5 $cnn_opts height-in=20 height-out=10 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
-  conv-relu-batchnorm-layer name=cnn6 $cnn_opts height-in=10 height-out=10 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
+  # the first splicing is moved before the lda layer, so no splicing here
+  relu-batchnorm-layer name=tdnn1 $opts dim=2048
+  linear-component name=tdnn2l dim=512 $linear_opts input=Append(-1,0)
+  relu-batchnorm-layer name=tdnn2 $opts input=Append(0,1) dim=2048
+  linear-component name=tdnn3l dim=512 $linear_opts
+  relu-batchnorm-layer name=tdnn3 $opts dim=2048
+  linear-component name=tdnn4l dim=512 $linear_opts input=Append(-1,0)
+  relu-batchnorm-layer name=tdnn4 $opts input=Append(0,1) dim=2048
+  linear-component name=tdnn5l dim=512 $linear_opts
+  relu-batchnorm-layer name=tdnn5 $opts dim=2048 input=Append(tdnn5l, tdnn3l)
+  linear-component name=tdnn6l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn6 $opts input=Append(0,3) dim=2048
+  linear-component name=tdnn7l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn7 $opts input=Append(0,3,tdnn6l,tdnn4l,tdnn2l) dim=2048
+  linear-component name=tdnn8l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn8 $opts input=Append(0,3) dim=2048
+  linear-component name=tdnn9l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn9 $opts input=Append(0,3,tdnn8l,tdnn6l,tdnn4l) dim=2048
+  linear-component name=tdnn10l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn10 $opts input=Append(0,3) dim=2048
+  linear-component name=tdnn11l dim=512 $linear_opts input=Append(-3,0)
+  relu-batchnorm-layer name=tdnn11 $opts input=Append(0,3,tdnn10l,tdnn8l,tdnn6l) dim=2048
+  linear-component name=prefinal-l dim=512 $linear_opts
 
-  # the first TDNN-F layer has no bypass
-  tdnnf-layer name=tdnnf7 $tdnnf_first_opts dim=1536 bottleneck-dim=256 time-stride=0
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf9 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf14 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf15 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf16 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf17 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-  tdnnf-layer name=tdnnf18 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
-
-  linear-component name=prefinal-l dim=256 $linear_opts
-
-  # adding the layers for chain branch
-  prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=1536 small-dim=256
+  relu-batchnorm-layer name=prefinal-chain input=prefinal-l $opts dim=2048
   output-layer name=output include-log-softmax=false dim=$num_targets $output_opts
 
-  # adding the layers for xent branch
-  prefinal-layer name=prefinal-xent input=prefinal-l $prefinal_opts big-dim=1536 small-dim=256
+  relu-batchnorm-layer name=prefinal-xent input=prefinal-l $opts dim=2048
   output-layer name=output-xent dim=$num_targets learning-rate-factor=$learning_rate_factor $output_opts
 
 EOF
   steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig --config-dir $dir/configs/
 fi
 
-
 if [ $stage -le 11 ]; then
   steps/nnet3/chain/train.py --stage $train_stage \
-    --use-gpu "wait" \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "--norm-means=false --norm-vars=false" \
     --chain.xent-regularize $xent_regularize \
-    --chain.leaky-hmm-coefficient $leaky_hmm_coefficient \
-    --chain.l2-regularize $l2_regularize \
+    --chain.leaky-hmm-coefficient 0.1 \
+    --chain.l2-regularize 0.00005 \
     --chain.apply-deriv-weights false \
     --chain.lm-opts="--num-extra-lm-states=2000" \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
-    --egs.opts "--frames-overlap-per-eg 0 --constrained false" \
+    --egs.opts "--frames-overlap-per-eg 0" \
     --egs.chunk-width $frames_per_eg \
-    --trainer.dropout-schedule $dropout_schedule \
-    --trainer.add-option="--optimization.memory-compression-level=2" \
-    --trainer.num-chunk-per-minibatch $num_chunk_per_minibatch \
-    --trainer.frames-per-iter $frames_per_iter \
+    --trainer.num-chunk-per-minibatch $minibatch_size \
+    --trainer.frames-per-iter 1500000 \
     --trainer.num-epochs $num_epochs \
     --trainer.optimization.num-jobs-initial $num_jobs_initial \
     --trainer.optimization.num-jobs-final $num_jobs_final \
@@ -206,7 +200,7 @@ if [ $stage -le 11 ]; then
     --feat-dir data/mfcc_hires_${train_set} \
     --tree-dir $tree_dir \
     --lat-dir $lat_dir \
-    --dir $dir  || exit 1;
+    --dir $dir || exit 1;
 fi
 
 if [ $stage -le 12 ]; then
@@ -227,4 +221,3 @@ fi
 
 echo "local/chain/tuning/run_tdnn_1a.sh succeeded"
 exit 0;
-
