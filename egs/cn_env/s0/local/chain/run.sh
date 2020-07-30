@@ -1,0 +1,1 @@
+tuning/run_cnn_tdnnf_1b.sh
