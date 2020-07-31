@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, argparse, codecs, os
+import sys, argparse, codecs, os, subprocess
 import random
 
 KALDI_ROOT='/home/speechio/work/kaldi'
@@ -31,8 +31,10 @@ assert(
   (args.scp != '')
 )
 
+os.mkdir(args.odir)
+
 # setup opts
-opts=' --start-time={} '.format(0) # add noise from beginning of audio
+opts=' --start-times={} '.format(0) # add noise from beginning of audio
 
 assert(args.normalize_output == "true" or args.normalize_output == "false")
 opts += ' --normalize-output={} '.format(args.normalize_output)
@@ -54,7 +56,7 @@ with open(args.noise_list, 'r') as f:
       noise_list.append(l)
 sys.stderr.write("Loaded Noise Library # wavs:{}\n".format(len(noise_list)))
 
-snr_list = list(range(args.snr_lower, args.snr_upper))
+snr_list = list(range(args.snr_lower, args.snr_upper+1))
 sys.stderr.write("Add noise SNR range:[{},{}]dB\n".format(snr_list[0], snr_list[-1]))
 
 keys = []
@@ -93,8 +95,8 @@ if args.list != '':
     new_wav = os.path.join(args.odir, new_key+'.wav')
 
     sys.stderr.write('{}  key={}  f={}  noise={}  snr={}dB  new_key={}  new_f={}\n'.format(i, key, wav, noise, snr, new_key, new_wav))
-    cmd = ADD_NOISE_TOOL + opts + ' additive-signal={} '.format(noise) + ' --snr={} '.format(snr) + wav + ' ' + new_wav
-    #os.system(cmd)
+    cmd = ADD_NOISE_TOOL + opts + ' --additive-signals={} '.format(noise) + ' --snrs={} '.format(snr) + wav + ' ' + new_wav
+    subprocess.run(cmd.split())
 
 elif args.scp != "":
   sys.stderr.write('Adding noise to wav scp...\n')
@@ -138,7 +140,6 @@ elif args.scp != "":
   sys.stderr.write('# of utt2spk loaded:{}\n'.format(len(utt2spk)))
 
   # add noise
-  os.mkdir(args.odir)
   os.mkdir(os.path.join(args.odir, 'wav'))
 
   oscp = open(os.path.join(args.odir, 'wav.scp'), 'w+')
@@ -163,8 +164,8 @@ elif args.scp != "":
     new_wav = os.path.join(args.odir, 'wav', new_key+'.wav')
 
     sys.stderr.write('{}  key={}  f={}  noise={}  snr={}dB  new_key={}  new_f={}\n'.format(i, key, wav, noise, snr, new_key, new_wav))
-    cmd = ADD_NOISE_TOOL + opts + ' additive-signal={} '.format(noise) + ' --snr={} '.format(snr) + wav + ' ' + new_wav
-    #os.system(cmd)
+    cmd = ADD_NOISE_TOOL + opts + ' --additive-signals={} '.format(noise) + ' --snrs={} '.format(snr) + wav + ' ' + new_wav
+    subprocess.run(cmd.split())
 
     # write new wav.scp
     oscp.write('{}\t{}\n'.format(new_key, os.path.join('wav', new_key+'.wav')))
