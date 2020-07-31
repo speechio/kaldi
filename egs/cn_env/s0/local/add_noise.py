@@ -120,6 +120,8 @@ elif args.scp != "":
   oscp = open(os.path.join(args.odir, 'wav.scp'), 'w+')
   if args.trans != '':
     otrans = codecs.open(os.path.join(args.odir, 'trans.txt'), 'w+', 'utf8')
+  outt2spk = open(os.path.join(args.odir, 'utt2spk'), 'w+')
+  ospk2utt = open(os.path.join(args.odir, 'spk2utt'), 'w+')
 
   for i in range(len(keys)):
     key = keys[i]
@@ -145,10 +147,14 @@ elif args.scp != "":
       text = trans.get(key)
       assert(text != None) # missing trans?
       otrans.write('{}\t{}\n'.format(new_key, text))
+    outt2spk.write('{}\t{}\n'.format(new_key, new_key))
+    ospk2utt.write('{}\t{}\n'.format(new_key, new_key))
   
   oscp.close()
   if (args.trans != ''):
     otrans.close()
+  outt2spk.close()
+  ospk2utt.close()
 
 else:
   sys.stderr.write("not list/scp?")
