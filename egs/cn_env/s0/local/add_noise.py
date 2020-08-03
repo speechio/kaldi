@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys, argparse, codecs, os, subprocess
 import random
+from multiprocessing import Pool
 
 KALDI_ROOT='/home/speechio/work/kaldi'
 ADD_NOISE_TOOL=os.path.join(KALDI_ROOT, 'src', 'featbin', 'wav-reverberate')
@@ -17,6 +18,8 @@ parser.add_argument("--list", type=str, default="", help="wav.list")
 parser.add_argument("--scp", type=str, default="", help="wav.scp")
 parser.add_argument("--trans", type=str, default="", help="trans.txt")
 parser.add_argument("--utt2spk", type=str, default="", help="utt2spk")
+
+parser.add_argument("--nj", type=int, default=30, help="")
 
 parser.add_argument("--normalize_output", type=str, default="false", help="true / false")
 parser.add_argument("--background_mode", type=str, default="true", help="true / false")
@@ -61,6 +64,7 @@ sys.stderr.write("Add noise SNR range:[{},{}]dB\n".format(snr_list[0], snr_list[
 
 keys = []
 wavs = {}
+cmd_pool = []
 
 if args.list != '':
   sys.stderr.write('Adding noise to wav list...\n')
@@ -96,7 +100,8 @@ if args.list != '':
 
     sys.stderr.write('{}  key={}  f={}  noise={}  snr={}dB  new_key={}  new_f={}\n'.format(i, key, wav, noise, snr, new_key, new_wav))
     cmd = ADD_NOISE_TOOL + opts + ' --additive-signals={} '.format(noise) + ' --snrs={} '.format(snr) + wav + ' ' + new_wav
-    subprocess.run(cmd.split())
+    cmd_pool.append(cmd)
+    #subprocess.run(cmd.split())
 
 elif args.scp != "":
   sys.stderr.write('Adding noise to wav scp...\n')
@@ -165,7 +170,8 @@ elif args.scp != "":
 
     sys.stderr.write('{}  key={}  f={}  noise={}  snr={}dB  new_key={}  new_f={}\n'.format(i, key, wav, noise, snr, new_key, new_wav))
     cmd = ADD_NOISE_TOOL + opts + ' --additive-signals={} '.format(noise) + ' --snrs={} '.format(snr) + wav + ' ' + new_wav
-    subprocess.run(cmd.split())
+    cmd_pool.append(cmd)
+    #subprocess.run(cmd.split())
 
     # write new wav.scp
     oscp.write('{}\t{}\n'.format(new_key, os.path.join('wav', new_key+'.wav')))
@@ -190,3 +196,13 @@ elif args.scp != "":
 
 else:
   sys.stderr.write("not list/scp?")
+
+# now execute command pool
+sys.stderr.write("command pool size:{}\n".format(len(cmd_pool)))
+
+def run(cmd):
+  subprocess.run(cmd.split())
+
+pool=Pool(args.nj)
+results = [ pool.apply_async(run, (cmd,)) for cmd in cmd_pool ]
+output = [ res.get() for res in results ]
