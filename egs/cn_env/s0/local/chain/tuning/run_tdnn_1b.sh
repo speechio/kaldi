@@ -1,11 +1,11 @@
 #!/bin/bash
-# _1b is as _1a, with dropout
+# _1b is as _1a, with dropout & some hyperparam tuning, based on multi_en run_tdnn_5b.sh
 
 set -e
 
 # config
 dir=exp/chain/tdnn_1b
-affix=
+affix=job_4_4_lr_0.001_0.00005
 
 nj=20
 train_set="train"
@@ -24,15 +24,15 @@ num_chunk_per_minibatch=128
 frames_per_eg=150,110,90
 
 num_jobs_initial=4
-num_jobs_final=16
+num_jobs_final=4
 initial_effective_lrate=0.001
-final_effective_lrate=0.0001
+final_effective_lrate=0.00005
 
+dropout_schedule='0,0@0.20,0.5@0.50,0'
 l2_regularize=0.00005
 max_param_change=2.0
 leaky_hmm_coefficient=0.1
 xent_regularize=0.1
-final_layer_normalize_target=0.5
 
 remove_egs=true
 common_egs_dir=
@@ -127,9 +127,9 @@ if [ $stage -le 10 ]; then
   echo "$0: creating neural net configs using the xconfig parser";
   num_targets=$(tree-info ${tree_dir}/tree | grep num-pdfs | awk '{print $2}')
   learning_rate_factor=$(echo "print 0.5/$xent_regularize" | python)
-  opts="l2-regularize=0.002"
-  linear_opts="orthonormal-constraint=1.0"
-  output_opts="l2-regularize=0.0005"
+  opts="l2-regularize=0.0015 dropout-proportion=0.0 dropout-per-dim=true dropout-per-dim-continuous=true"
+  linear_opts="l2-regularize=0.0015 orthonormal-constraint=-1.0"
+  output_opts="l2-regularize=0.001"
 
   mkdir -p $dir/configs
   cat <<EOF > $dir/configs/network.xconfig
@@ -162,6 +162,7 @@ if [ $stage -le 10 ]; then
   relu-batchnorm-dropout-layer name=tdnn10 $opts input=Append(0,3) dim=1280
   linear-component name=tdnn11l dim=256 $linear_opts input=Append(-3,0)
   relu-batchnorm-dropout-layer name=tdnn11 $opts input=Append(0,3,tdnn10l,tdnn8l,tdnn6l) dim=1280
+  
   linear-component name=prefinal-l dim=256 $linear_opts
 
   relu-batchnorm-dropout-layer name=prefinal-chain input=prefinal-l $opts dim=1280
@@ -188,6 +189,7 @@ if [ $stage -le 11 ]; then
     --egs.stage $get_egs_stage \
     --egs.opts "--frames-overlap-per-eg 0" \
     --egs.chunk-width $frames_per_eg \
+    --trainer.dropout-schedule $dropout_schedule \
     --trainer.num-chunk-per-minibatch $num_chunk_per_minibatch \
     --trainer.frames-per-iter $frames_per_iter \
     --trainer.num-epochs $num_epochs \

@@ -21,6 +21,7 @@ remove_egs=true
 reporting_email=
 
 # training options
+cmvn_opts="--norm-means=false --norm-vars=false"
 num_epochs=4
 initial_effective_lrate=0.00015
 final_effective_lrate=0.000015
@@ -190,7 +191,7 @@ if [ $stage -le 11 ]; then
   steps/nnet3/chain/train.py --stage $train_stage \
     --use-gpu "wait" \
     --cmd "$decode_cmd" \
-    --feat.cmvn-opts "--norm-means=false --norm-vars=false" \
+    --feat.cmvn-opts "$cmvn_opts" \
     --chain.xent-regularize $xent_regularize \
     --chain.leaky-hmm-coefficient $leaky_hmm_coefficient \
     --chain.l2-regularize $l2_regularize \

@@ -177,6 +177,7 @@ fi
 
 if [ $stage -le 11 ]; then
   steps/nnet3/chain/train.py --stage $train_stage \
+    --use-gpu "wait" \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "--norm-means=false --norm-vars=false" \
     --chain.xent-regularize $xent_regularize \
