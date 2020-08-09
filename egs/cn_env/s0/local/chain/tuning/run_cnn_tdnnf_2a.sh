@@ -1,11 +1,11 @@
 #!/bin/bash
-# _1c is as _1a, with 80-dim fbank feature, more cnn layer to deal with increased fbank-dim
+# _2a is as _1a, with 80-dim fbank feature, more cnn layer to deal with increased fbank-dim
 
 set -e
 
 # ---------- CONFIG ---------- #
-dir=exp/chain/cnn_tdnnf_1c
-affix=job_3_16_lr_0.00015_0.000015
+dir=exp/chain/cnn_tdnnf_2a
+affix=job_4_4_lr_0.00015_0.00006_7cnn_fisrt_conv_64
 
 nj=20
 stage=0
@@ -30,10 +30,10 @@ frames_per_iter=3000000
 num_chunk_per_minibatch=128,64
 chunk_width=150,110,100
 
-num_jobs_initial=3
-num_jobs_final=16
+num_jobs_initial=4
+num_jobs_final=4
 initial_effective_lrate=0.00015
-final_effective_lrate=0.000015
+final_effective_lrate=0.00006
 
 l2_regularize=0.0
 max_param_change=2.0
@@ -148,19 +148,19 @@ if [ $stage -le 10 ]; then
   input dim=80 name=input
   batchnorm-component name=fbank-batchnorm
 
-  # spec augmentation
+  # spec-augment
   spec-augment-layer name=spec-augment freq-max-proportion=0.5 time-zeroed-proportion=0.2 time-mask-max-frames=20
 
-  # CNN layers
-  conv-relu-batchnorm-layer name=cnn1 $cnn_opts height-in=80 height-out=40 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
-  conv-relu-batchnorm-layer name=cnn2 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
-  conv-relu-batchnorm-layer name=cnn3 $cnn_opts height-in=40 height-out=20 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
-  conv-relu-batchnorm-layer name=cnn4 $cnn_opts height-in=20 height-out=20 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
-  conv-relu-batchnorm-layer name=cnn5 $cnn_opts height-in=20 height-out=10 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
-  conv-relu-batchnorm-layer name=cnn6 $cnn_opts height-in=10 height-out=10 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
+  conv-relu-batchnorm-layer name=cnn1 $cnn_opts height-in=80 height-out=80 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
+  conv-relu-batchnorm-layer name=cnn2 $cnn_opts height-in=80 height-out=40 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
+  conv-relu-batchnorm-layer name=cnn3 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=64
+  conv-relu-batchnorm-layer name=cnn4 $cnn_opts height-in=40 height-out=20 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
+  conv-relu-batchnorm-layer name=cnn5 $cnn_opts height-in=20 height-out=20 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=128
+  conv-relu-batchnorm-layer name=cnn6 $cnn_opts height-in=20 height-out=10 height-subsample-out=2 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
+  conv-relu-batchnorm-layer name=cnn7 $cnn_opts height-in=10 height-out=10 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=256
 
-  # the first TDNN-F layer has no bypass (since dims don't match), and a larger bottleneck so the
-  # information bottleneck doesn't become a problem.
+  ## the first TDNN-F layer has no bypass (since dims don't match), and a larger bottleneck so the
+  ## information bottleneck doesn't become a problem.
   tdnnf-layer name=tdnnf1 $tdnnf_first_opts dim=1536 bottleneck-dim=256 time-stride=0
   tdnnf-layer name=tdnnf2 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
   tdnnf-layer name=tdnnf3 $tdnnf_opts dim=1536 bottleneck-dim=160 time-stride=3
@@ -236,5 +236,5 @@ if [ $stage -le 13 ]; then
   done
 fi
 
-echo "local/chain/tuning/run_tdnn_1c.sh succeeded"
+echo "local/chain/tuning/run_cnn_tdnnf_2a.sh succeeded"
 exit 0;
