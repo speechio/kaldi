@@ -52,7 +52,7 @@ mv $tmp/trans_tn_ws.txt $tmp/text
 #utils/utt2spk_to_spk2utt.pl $tmp/utt2spk | sort -k 1 | uniq > $tmp/spk2utt
 
 # utt2spk & spk2utt
-cp $corpus/utt2spk $tmp/utt2spk
+cat $corpus/utt2spk | sort -k 1 | uniq > $tmp/utt2spk
 utils/utt2spk_to_spk2utt.pl $tmp/utt2spk | sort -k 1 | uniq > $tmp/spk2utt
 
 # copy prepared resources from tmp_dir to target dir
