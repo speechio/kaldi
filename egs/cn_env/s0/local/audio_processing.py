@@ -202,20 +202,20 @@ for i in range(len(keys)):
     tempo = random.choice(tempo_list)
     cmd.append('{} -t wav - -t wav - tempo {:.2f}'.format(SOX, tempo))
     if (args.key_append_tempo == 'true'):
-      new_key += '__TP{:.2f}'.format(tempo)
+      new_key += '__TP_{:.2f}'.format(tempo)
   
   if (len(speed_list) != 0):
     speed = random.choice(speed_list)
     cmd.append('{} -t wav - -t wav - speed {:.2f}'.format(SOX, speed))
     if (args.key_append_speed == 'true'):
-      new_key += '__SP{:.2f}'.format(speed)
+      new_key += '__SP_{:.2f}'.format(speed)
 
   if (len(snr_list) != 0):
     noise = random.choice(noise_list)
     snr = random.choice(snr_list)
     cmd.append('{} {} --additive-signals={} --snrs={} - - '.format(ADD_NOISE_TOOL, add_noise_opts, noise, snr))
     if (args.key_append_snr):
-      new_key += '__SNR{}dB'.format(snr)
+      new_key += '__SNR_{}dB'.format(snr)
 
   if (args.key_append_string != ''):
     new_key += '__{}'.format(args.key_append_string)
