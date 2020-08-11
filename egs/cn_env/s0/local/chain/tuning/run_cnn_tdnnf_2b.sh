@@ -1,17 +1,12 @@
 #!/bin/bash
-# _2a is as _1b, with modifications:
-#  * 80-dim fbank feature
-#  * speaker-level cmvn: 
-#     default norm-means=true, norm-vars=true
-#     note that speaker-level cmvn is not capable to deal with real-life application, where speaker's mean/var infos are unknown
-#     instead, it is more practical to use global cmvn
-#  * cnn layers 6 -> 7
+# _2b is as _2a, with modifications:
+# * add online cmvn: default norm-means=true, norm-vars=false
 
 set -e
 
 # ---------- CONFIG ---------- #
-dir=exp/chain/cnn_tdnnf_2a
-affix=
+dir=exp/chain/cnn_tdnnf_2b
+affix=job_3_16_lr_0.00015_0.000015_7cnn_12tdnnf_cmn
 
 nj=20
 stage=0
@@ -27,10 +22,13 @@ srand=0
 remove_egs=true
 common_egs_dir=
 
-# training options
+# feature options
 feat_type="fbank" # mfcc or fbank
-cmvn_opts="--norm-means=true --norm-vars=true"
+get_egs_opts="--frames-overlap-per-eg 0 --constrained false --online-cmvn true"
+cmvn_opts="--norm-means=true --norm-vars=false"
+#cmvn_opts="--config conf/online_cmvn.conf"
 
+# training options
 num_epochs=4
 frames_per_iter=3000000
 num_chunk_per_minibatch=128,64
@@ -218,7 +216,7 @@ if [ $stage -le 11 ]; then
     --egs.chunk-width $chunk_width \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
-    --egs.opts "--frames-overlap-per-eg 0 --constrained false" \
+    --egs.opts="$get_egs_opts" \
     --cleanup.remove-egs $remove_egs \
     --feat-dir data/${feat_type}_hires_${train_set} \
     --tree-dir $tree_dir \
