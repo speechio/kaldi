@@ -22,7 +22,10 @@ AISHELL2_Android_dev=$DB/AISHELL-2/Android/dev
 AISHELL2_Android_test=$DB/AISHELL-2/Android/test
 
 mobile_0007=$DB/mobile_0007/data
+mobile_0007_aug=$DB/mobile_0007__TP_1.0_1.25__SNR_3_25
+
 mobile_2000h=$DB/mobile_2000h/data
+mobile_2000h_aug=$DB/mobile_2000h__TP_1.0_1.25__SNR_3_25
 
 magicdata_train=$DB/magicdata/train
 magicdata_dev=$DB/magicdata/dev
@@ -31,16 +34,25 @@ magicdata_test=$DB/magicdata/test
 primewords=$DB/primewords/data
 stcmds=$DB/stcmds/data
 
+tiobe_cctv_news=$DB/tiobe/cctv_news
+tiobe_laoluo_yulu=$DB/tiobe/laoluo_yulu
+tiobe_liyongle=$DB/tiobe/liyongle
+tiobe_luozhenyu=$DB/tiobe/luozhenyu
+tiobe_luyu_yirixing=$DB/tiobe/luyu_yirixing
+tiobe_story_fm=$DB/tiobe/story_fm
+tiobe_tianxiazuqiu=$DB/tiobe/tianxiazuqiu
+tiobe_zhibo_daihuo=$DB/tiobe/zhibo_daihuo
+tiobe_zhibo_wangzherongyao=$DB/tiobe/zhibo_wangzherongyao
+
 #-------------------- CONFIG --------------------#
 ## AM training & testing data
 trn_list=""
 #trn_list="$trn_list aidatatang_train aidatatang_dev"
 trn_list="$trn_list AISHELL1_train AISHELL1_dev"
 trn_list="$trn_list AISHELL2_iOS_train AISHELL2_iOS_dev"
-trn_list="$trn_list AISHELL2_iOS_train"
 trn_list="$trn_list AISHELL2_Android_train AISHELL2_Android_dev"
-trn_list="$trn_list mobile_0007"
-trn_list="$trn_list mobile_2000h"
+trn_list="$trn_list mobile_0007 mobile_0007_aug"
+trn_list="$trn_list mobile_2000h mobile_2000h_aug"
 trn_list="$trn_list magicdata_train magicdata_dev"
 trn_list="$trn_list primewords"
 trn_list="$trn_list stcmds"
@@ -51,6 +63,7 @@ tst_list="$tst_list AISHELL1_test"
 tst_list="$tst_list AISHELL2_iOS_test" 
 tst_list="$tst_list AISHELL2_Android_test" 
 tst_list="$tst_list magicdata_test" 
+#tst_list="$tst_list tiobe_cctv_news tiobe_laoluo_yulu tiobe_liyongle tiobe_luozhenyu tiobe_luyu_yirixing tiobe_story_fm tiobe_tianxiazuqiu tiobe_zhibo_daihuo tiobe_zhibo_wangzherongyao" 
 
 ## Pronounciation Lexicon
 raw_lexicon=prepare/lexicon.txt
@@ -165,7 +178,7 @@ if [ $STEP_TRAIN_GMM -eq 1 ]; then
 fi
 
 if [ $STEP_TRAIN_DNN -eq 1 ]; then
-  local/chain/run_tdnn.sh --nj $nj \
+  local/chain/run.sh --nj $nj \
     --stage $dnn_stage \
     --train-set "train_dnn" --test-sets "$test_sets"
 fi
