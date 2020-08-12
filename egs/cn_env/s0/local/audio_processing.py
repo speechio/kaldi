@@ -17,6 +17,9 @@ parser.add_argument("--scp", type=str, default="", help="wav.scp")
 parser.add_argument("--trans", type=str, default="", help="trans.txt")
 parser.add_argument("--utt2spk", type=str, default="", help="utt2spk")
 
+parser.add_argument("--key_append_volume", type=str, default="true", help="true / false")
+parser.add_argument("--volumes", type=str, default="", help="0.1:0.3:1.0 means [0.1, 0.4, 0.7, 1.0], upper bound INCLUDED")
+
 parser.add_argument("--key_append_tempo", type=str, default="true", help="true / false")
 parser.add_argument("--tempos", type=str, default="", help="0.9:0.1:1.2 means [0.9, 1.0, 1.1, 1.2], upper bound INCLUDED")
 
@@ -38,6 +41,7 @@ args = parser.parse_args()
 # validate args
 assert((args.list != '') or (args.scp != ''))
 
+assert(args.key_append_volume == 'true' or args.key_append_volume == 'false')
 assert(args.key_append_tempo == 'true' or args.key_append_tempo == 'false')
 assert(args.key_append_speed == 'true' or args.key_append_speed == 'false')
 
@@ -45,6 +49,24 @@ assert(args.key_append_snr == 'true' or args.key_append_snr == 'false')
 assert(args.normalize_output == 'true' or args.normalize_output == 'false')
 assert(args.background_mode == 'true' or args.background_mode == 'false')
 assert(args.random_noise_position == 'true' or args.random_noise_position == 'false')
+
+# parse volume perturbation
+volume_list = []
+if (args.tempos != ''):
+  fields = args.volumes.split(':')
+  assert(len(fields) == 3)  # lower:step:upper
+  volume_lower, volume_step, volume_upper = [ float(f) for f in fields ]
+  assert((volume_lower <= volume_upper) and (volume_step > 0))
+
+  x = volume_lower
+  while (x < volume_upper + 0.00001): # add 0.00001 to include upper bound
+    volume_list.append(x)
+    x += volume_step
+
+  sys.stderr.write('Volume Perturbation Range: [')
+  for x in volume_list:
+    sys.stderr.write('{:.2f}, '.format(x))
+  sys.stderr.write(']\n')
 
 # parse tempo perturbation
 tempo_list = []
@@ -55,7 +77,7 @@ if (args.tempos != ''):
   assert((tempo_lower <= tempo_upper) and (tempo_step > 0))
 
   x = tempo_lower
-  while (x < tempo_upper + 0.00001): # add 0.00001 to deal with round off
+  while (x < tempo_upper + 0.00001): # add 0.00001 to include upper bound
     tempo_list.append(x)
     x += tempo_step
 
@@ -73,7 +95,7 @@ if (args.speeds != ''):
   assert((speed_lower <= speed_upper) and (speed_step > 0))
 
   x = speed_lower
-  while (x < speed_upper + 0.00001):  # add 0.00001 to deal with round off
+  while (x < speed_upper + 0.00001):  # add 0.00001 to include upper bound
     speed_list.append(x)
     x += speed_step
 
@@ -197,6 +219,12 @@ for i in range(len(keys)):
   cmd = []
   cmd.append('cat {} '.format(wav))
   new_key = key
+
+  if (len(volume_list) != 0):
+    volume = random.choice(volume_list)
+    cmd.append('{} -v {:.2f} -t wav - -t wav - '.format(SOX, volume))
+    if (args.key_append_volume == 'true'):
+      new_key += '__VOL_{:.2f}'.format(volume)
 
   if (len(tempo_list) != 0):
     tempo = random.choice(tempo_list)
