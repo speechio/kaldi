@@ -24,3 +24,6 @@ sys.stderr.write("number of tasks N={}, number of workers M={}.\n".format(len(ta
 pool = multiprocessing.Pool(args.nj)
 results = [ pool.apply_async(run, (task,)) for task in tasks ]
 output = [ res.get() for res in results ]
+
+sys.stderr.write('Parallel executing batch commands {} done.\n'.format(args.cmd_list))
+
