@@ -24,7 +24,7 @@ echo "building new arpa:$arpa into new HCLG in $new_graph"
 
 cp -r data/lang_test $new_lang
 rm ${new_lang}/G.fst
-sed -i "s:<UNK>:<unk>:" $new_lang/words.txt
+sed -i "s:<UNK>:<unk>:g" $new_lang/words.txt
 arpa2fst --disambig-symbol=#0 --read-symbol-table=${new_lang}/words.txt $arpa ${new_lang}/G.fst
 utils/mkgraph.sh --self-loop-scale 1.0 $new_lang $am_dir $new_graph
 
