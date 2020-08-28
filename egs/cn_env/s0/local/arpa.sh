@@ -1,7 +1,7 @@
 #!/bin/sh
 
 nj=1
-stage=1
+stage=0
 debug=2
 mode=
 
@@ -18,7 +18,6 @@ if [ $# -ne 5 ]; then
     echo "  For training: arpa.sh --mode train --nj 10 4gram.arpa 4 words.txt trn.txt wdir"
     echo "  For testing : arpa.sh --mode test  --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
     echo "  For pruning : arpa.sh --mode prune --nj 1  4gram.arpa 4 words.txt tst.txt wdir"
-    #echo "  Be carefull, existing <working_dir> will be deleted."
     exit 1;
 fi
 
@@ -33,17 +32,17 @@ thresholds="1e-8 1e-9 1e-10 1e-11 1e-12"
 trn_opts=""
 #trn_opts="-gt2min 5 -gt2max 20 -gt3min 5 -gt3max 20 -gt4min 5 -gt4max 20"
 
-kenlm_opts="-o $order -S 50% --prune 0 1 1 1"
-
-echo "`basename $0`: counting lines ..."
-n=`cat $text | wc -l`
-echo "`basename $0`: $n lines in $text"
-
-#[ -d $dir ] && rm -rf $dir
+kenlm_opts="-o $order -S 50% --prune 0 25 25 25"
 
 mkdir -p $dir
 text_name=`basename $text .txt`
 processed_text=$text
+
+if [ $stage -le 0 ]; then
+    echo "`basename $0`: counting lines ..."
+    n=`cat $text | wc -l`
+    echo "`basename $0`: $n lines in $text"
+fi
 
 if [ $stage -le 1 ]; then
     sh local/cn_tp.sh --nj $nj $vocab $text $dir

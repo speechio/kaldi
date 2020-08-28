@@ -1,1 +1,1 @@
-tuning/run_cnn_tdnnf_1b.sh
+tuning/run_tdnnf_2a_2x.sh
