@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright 2020 Johns Hopkins University (Author: Desh Raj)
 # Apache 2.0
 
@@ -9,13 +9,17 @@
 # vb_hmm_xvector.sh which can divide all labels into per recording
 # labels.
 
-import sys, argparse, struct, re
-import numpy as np
+import sys
+import argparse
+import struct
 import itertools
-import kaldi_io
 
+import numpy as np
+import kaldi_io
 from scipy.special import softmax
 
+sys.path.insert(0, 'steps')
+import libs.common as common_lib
 import VB_diarization
 
 ########### HELPER FUNCTIONS #####################################
@@ -36,11 +40,10 @@ def get_args():
                         help="scale sufficient statistics collected using UBM")
     parser.add_argument("--fb", type=float, default=11,
                         help="speaker regularization coefficient Fb (controls final # of speaker)")
-    parser.add_argument("--overlap-rttm", type=str,
-                        help="path to an RTTM file containing overlap segments. If provided,"
-                        "multiple speaker labels will be allocated to these segments.")
-    parser.add_argument("xvector_ark_file", type=str,
-                        help="Ark file containing xvectors for all subsegments")
+    parser.add_argument("xvector_scp_file", type=str,
+                        help="Scp file containing xvectors for all subsegments")
+    parser.add_argument("reco2segs", type=str, help="Spk2utt style file "
+                        "containing recording to segment information")
     parser.add_argument("plda", type=str,
                         help="path to PLDA model")
     parser.add_argument("input_label_file", type=str,
@@ -51,87 +54,38 @@ def get_args():
     return args
 
 def read_labels_file(label_file):
-    segments = []
-    labels = []
-    with open(label_file, 'r') as f:
-        for line in f.readlines():
-            segment, label = line.strip().split()
-            segments.append(segment)
-            labels.append(int(label))
-    return segments, labels
+    seg2label = {}
+    with common_lib.smart_open(label_file, 'r') as f:
+        for line in f:
+            segment, label = line.strip().split(" ")
+            seg2label[segment]  = int(label)
+    return seg2label
+
+def read_reco2seg_file(reco2seg_file):
+    reco2segs = {}
+    with common_lib.smart_open(reco2seg_file, 'r') as f:
+        for line in f:
+            parts = line.strip().split(" ")
+            reco2segs[parts[0]] = parts[1:]
+    return reco2segs
 
 def write_labels_file(seg2label, out_file):
-    f = open(out_file, 'w')
-    for seg in sorted(seg2label.keys()):
-        label = seg2label[seg]
-        if type(label) is tuple:
-            f.write("{} {}\n".format(seg, label[0]))
-            f.write("{} {}\n".format(seg, label[1]))
-        else:
-            f.write("{} {}\n".format(seg, label))
-    f.close()
-    return
-
-def get_overlap_decision(overlap_segs, subsegment, frac = 0.5):
-    """ Returns true if at least 'frac' fraction of the subsegment lies
-    in the overlap_segs."""
-    start_time = subsegment[0]
-    end_time = subsegment[1]
-    dur = end_time - start_time
-    total_ovl = 0
-    
-    for seg in overlap_segs:
-        cur_start, cur_end = seg
-        if (cur_start >= end_time):
-            break
-        ovl_start = max(start_time, cur_start)
-        ovl_end = min(end_time, cur_end)
-        ovl_time = max(0, ovl_end-ovl_start)
-
-        total_ovl += ovl_time
-    
-    return (total_ovl >= frac * dur)
-
-
-def get_overlap_vector(overlap_rttm, segments):
-    reco_id = '_'.join(segments[0].split('_')[:3])
-    overlap_segs = []
-    with open(overlap_rttm, 'r') as f:
-        for line in f.readlines():
-            parts = line.strip().split()
-            if (parts[1] == reco_id):
-                overlap_segs.append((float(parts[3]), float(parts[3]) + float(parts[4])))
-    ol_vec = np.zeros(len(segments))
-    overlap_segs.sort(key=lambda x: x[0])
-    for i, segment in enumerate(segments):
-        parts = re.split('_|-',segment)
-        start_time = (float(parts[3]) + float(parts[5]))/100
-        end_time = (float(parts[3]) + float(parts[6]))/100
-
-        is_overlap = get_overlap_decision(overlap_segs, (start_time, end_time))
-        if is_overlap:
-            ol_vec[i] = 1
-    print ("{}: {} fraction of segments are overlapping".format(id, ol_vec.sum()/len(ol_vec)))
-    return ol_vec
+    with common_lib.smart_open(out_file, 'w') as f:
+        for seg in sorted(seg2label.keys()):
+            label = seg2label[seg]
+            f.write("{0} {1}\n".format(seg, label))
 
 def read_args(args):
-    segments, labels = read_labels_file(args.input_label_file)
-    xvec_all = dict(kaldi_io.read_vec_flt_ark(args.xvector_ark_file))
-    xvectors = []
-    for segment in segments:
-        xvectors.append(xvec_all[segment])
+    seg2label = read_labels_file(args.input_label_file)
+    reco2segs = read_reco2seg_file(args.reco2segs)
+    xvectors = dict(kaldi_io.read_vec_flt_scp(args.xvector_scp_file))
     _, _, plda_psi = kaldi_io.read_plda(args.plda)
-    if (args.overlap_rttm is not None):
-        print('Getting overlap segments...')
-        overlaps = get_overlap_vector(args.overlap_rttm, segments)
-    else:
-        overlaps = None
-    return xvectors, segments, labels, plda_psi, overlaps
+    return xvectors, seg2label, reco2segs, plda_psi
 
 
 ###################################################################
 
-def vb_hmm(segments, in_labels, xvectors, overlaps, plda_psi, init_smoothing, loop_prob, fa, fb):
+def vb_hmm(segments, in_labels, xvectors, plda_psi, init_smoothing, loop_prob, fa, fb):
     x = np.array(xvectors)
     dim = x.shape[1]
 
@@ -153,28 +107,25 @@ def vb_hmm(segments, in_labels, xvectors, overlaps, plda_psi, init_smoothing, lo
         gamma=q_init, maxSpeakers=q_init.shape[1], maxIters=40, epsilon=1e-6, loopProb=loop_prob,
         Fa=fa, Fb=fb)
 
-    labels = np.argsort(q, axis=1)[:,[-1,-2]]
+    labels = np.unique(q.argmax(1), return_inverse=True)[1] 
 
-    if overlaps is not None:
-        final_labels = []
-        for i in range(len(overlaps)):
-            if (overlaps[i] == 1):
-                final_labels.append((labels[i,0], labels[i,1]))
-            else:
-                final_labels.append(labels[i,0])
-    else:
-        final_labels = labels[:,0]
-    
-    return {seg:label for seg,label in zip(segments,final_labels)}
+    return {seg:label for seg,label in zip(segments,labels)}
 
 def main():
     args = get_args()
-    xvectors, segments, labels, plda_psi, overlaps = read_args(args)
+    xvectors_all, seg2label, reco2segs, plda_psi = read_args(args)
 
-    seg2label_vb = vb_hmm(segments, labels, xvectors, overlaps, plda_psi, args.init_smoothing, 
-        args.loop_prob, args.fa, args.fb)
+    seg2label_vb = {}
+    for reco_id in reco2segs:
+        segments = reco2segs[reco_id]
+        labels = [seg2label[seg] for seg in segments]
+        xvectors = [xvectors_all[k] for k in segments]
+        seg2label_vb.update(
+            vb_hmm(
+                segments, labels, xvectors, plda_psi, args.init_smoothing,
+                args.loop_prob, args.fa, args.fb
+        ))
     write_labels_file(seg2label_vb, args.output_label_file)
 
 if __name__=="__main__":
     main()
-
